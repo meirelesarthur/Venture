@@ -1,0 +1,4 @@
+src/components/layouts/AuthGuard.tsx(18,60): error TS2345: Argument of type '"lead" | "cliente" | "parceiro" | "admin"' is not assignable to parameter of type '"cliente" | "parceiro" | "admin"'.
+  Type '"lead"' is not assignable to type '"cliente" | "parceiro" | "admin"'.
+src/components/ui/sonner.tsx(9,29): error TS2303: Circular definition of import alias 'ToasterProps'.
+src/components/ui/sonner.tsx(9,34): error TS2459: Module '"@/components/ui/sonner"' declares 'ToasterProps' locally, but it is not exported.

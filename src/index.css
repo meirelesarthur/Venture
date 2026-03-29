@@ -1,0 +1,117 @@
+/* Google Fonts — Poppins (deve vir ANTES do @import tailwindcss) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/*
+ * Venture Carbon — Design System Tokens
+ * Baseado no venture-carbon-dev-guide.md v2.0
+ */
+
+@theme inline {
+  /* Cores Minimalistas Tech */
+  --color-primary: #000000; /* Preto forte para contraste primário (ex: logo, ícones principais) */
+  --color-primary-foreground: #FFFFFF;
+  --color-background: #F4F5F7; /* Cinza muito claro, como no frame de referência */
+  --color-foreground: #111827; /* Preto suave para textos */
+  --color-surface: #FFFFFF;
+  --color-muted: #9CA3AF;
+  --color-muted-foreground: #6B7280;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  /* Mapa — cores de área */
+  --color-map-project: #10B981;
+  --color-map-control: #3B82F6;
+  --color-map-excluded: #D1D5DB;
+
+  /* shadcn/ui semantic tokens */
+  --color-card: #FFFFFF;
+  --color-card-foreground: #111827;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #111827;
+  --color-secondary: #F3F4F6;
+  --color-secondary-foreground: #111827;
+  --color-accent: #3B82F6; /* Azul vibrante estilo a referência */
+  --color-accent-foreground: #FFFFFF;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+  --color-border: #E5E7EB; /* Bordas super sutis */
+  --color-input: #E5E7EB;
+  --color-ring: #3B82F6;
+
+  /* Border Radius - Arredondamentos mais generosos (Referência tech) */
+  --radius-sm: 0.5rem;   /* 8px */
+  --radius-md: 0.75rem;  /* 12px */
+  --radius-lg: 1rem;     /* 16px */
+  --radius-xl: 1.5rem;   /* 24px */
+  --radius-2xl: 2rem;    /* 32px */
+
+  /* Tipografia — Poppins */
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  
+  --shadow-soft: 0 4px 40px rgba(0, 0, 0, 0.03);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+/* Base Styles */
+*,
+*::before,
+*::after {
+  border-color: var(--color-border);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilitários globais de micro-animação */
+.btn-micro, button, a {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.card-minimal {
+  background-color: var(--color-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Hierarquia Tipográfica Venture Carbon */
+h1 {
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+/* Label / Caption */
+.text-caption {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Micro / Legenda */
+.text-micro {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
