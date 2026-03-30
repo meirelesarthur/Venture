@@ -63,9 +63,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
       {/* Header */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-3 mb-6">
+        <div className="flex items-center justify-center mb-6">
           <img src={Logo} alt="Venture Carbon" className="h-10 w-auto object-contain" />
-          <span className="text-2xl font-bold text-foreground tracking-tight">Venture Carbon</span>
         </div>
 
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-warning/10 border border-warning/20 mb-6">

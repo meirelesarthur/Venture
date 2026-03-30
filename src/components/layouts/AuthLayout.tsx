@@ -110,9 +110,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           }`}
         >
           {/* Logo */}
-          <div className="flex h-16 items-center gap-3 border-b px-6">
-            <img src={Logo} alt="Venture Carbon" className="h-8 w-auto object-contain" />
-            <span className="text-lg font-semibold text-foreground tracking-tight">Venture Carbon</span>
+          <div className="flex h-16 items-center border-b px-6">
+            <img src={Logo} alt="Venture Carbon" className="h-10 w-auto object-contain" />
           </div>
 
           {/* Nav */}
@@ -173,7 +172,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Main area ───────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 bg-surface px-4 sm:px-8 shadow-md border border-border/40 mx-4 mt-3 rounded-bl-2xl rounded-br-2xl">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 bg-surface pr-4 sm:pr-8 shadow-md border-x border-b border-border/40 mx-4 sm:mx-8 lg:mx-10 rounded-b-3xl transition-all duration-300">
           <div className="flex items-center gap-4">
             {role !== 'cliente' && (
               <Button
@@ -185,9 +184,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </Button>
             )}
-            <div className="flex items-center gap-3">
-              <img src={Logo} alt="Venture Carbon" className="h-8 w-auto object-contain" />
-              <span className="text-lg font-bold text-foreground tracking-tight">Venture Carbon</span>
+            <div className="flex items-center">
+              <img src={Logo} alt="Venture Carbon" className="h-10 w-auto object-contain" />
             </div>
           </div>
 
@@ -284,7 +282,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10 lg:pl-4">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10">{children}</main>
       </div>
     </div>
   )
