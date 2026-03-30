@@ -1,78 +1,146 @@
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tractor, Plus, Save } from 'lucide-react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tractor, Plus, Save, Trash2, Info } from 'lucide-react'
+import { useDataStore } from '@/store/data'
+import type { OperacaoMec } from '@/store/data'
+import { toast } from 'sonner'
 
-export default function OperacionalForm() {
-  const [registros, setRegistros] = useState([
-    { id: 1, operacao: 'Plantio e Pulverização', comb: 'Diesel S10', litros: '15.400 L' },
-    { id: 2, operacao: 'Colheita e Transporte Interno', comb: 'Diesel S10', litros: '8.200 L' },
-  ])
+const OPERACOES = ['plantio','colheita','pulverizacao','adubacao_base','adubacao_cobertura','calagem','subsolagem','gradeacao','irrigacao_bombeamento','transporte_interno']
+const LABEL_OP: Record<string,string> = {
+  plantio: 'Plantio', colheita: 'Colheita', pulverizacao: 'Pulverização',
+  adubacao_base: 'Adubação de Base', adubacao_cobertura: 'Adubação de Cobertura',
+  calagem: 'Aplicação de Calcário', subsolagem: 'Subsolagem', gradeacao: 'Gradeação',
+  irrigacao_bombeamento: 'Bombeamento de Irrigação', transporte_interno: 'Transporte Interno'
+}
+const COMBUSTIVEIS = ['diesel','gasolina','etanol','eletricidade']
+const LABEL_COMB: Record<string,string> = { diesel: 'Diesel B', gasolina: 'Gasolina', etanol: 'Etanol (EF=0)', eletricidade: 'Eletricidade (energia renovável)' }
+// EF CO2 por litro (kgCO2/L)
+const EF_COMB: Record<string,number> = { diesel: 2.63, gasolina: 2.27, etanol: 0, eletricidade: 0 }
+
+interface Props { talhaoId: string; anoAgricola: number; locked: boolean; manejoId?: string }
+
+export default function OperacionalForm({ talhaoId, anoAgricola, locked, manejoId }: Props) {
+  const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
+  const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
+  const [ops, setOps] = useState<OperacaoMec[]>(existente?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
+
+  useEffect(() => {
+    const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    setOps(m?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
+  }, [talhaoId, anoAgricola])
+
+  const update = (i: number, f: keyof OperacaoMec, v: any) =>
+    setOps(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
+
+  const totalCO2 = ops.reduce((acc, op) => acc + (EF_COMB[op.combustivel] ?? 0) * op.litros / 1000, 0)
+
+  const handleSave = () => {
+    const payload = {
+      talhaoId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const, operacoes: ops,
+    }
+    if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
+    toast.success('Dados operacionais salvos!')
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-border/50 pb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Tractor className="text-primary" /> Operações Mecanizadas
-          </h2>
-          <p className="text-sm text-muted-foreground">Registre o consumo de energia e combustíveis fósseis das máquinas agrícolas.</p>
-        </div>
+      <div>
+        <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <Tractor className="text-primary" size={20} /> Operações Mecanizadas
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">Registre as operações com máquinas e consumo de combustível por hectare.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6">
-        <div className="space-y-2 md:col-span-2">
-          <Label>Grupo Operacional</Label>
-          <Select defaultValue="plantio">
-            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="preparo">Preparo de Solo (Gradagem, Subsolagem)</SelectItem>
-              <SelectItem value="plantio">Plantio, Tratos e Pulverização</SelectItem>
-              <SelectItem value="colheita">Colheita e Transporte</SelectItem>
-              <SelectItem value="bombeio">Irrigação (Motores a Combustão)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Consumo Bruto Declarado</Label>
-          <div className="flex items-center gap-2">
-             <Input type="number" placeholder="0" className="rounded-xl" />
-             <span className="text-sm font-medium text-muted-foreground">Litros</span>
-          </div>
-        </div>
-        <div className="space-y-2 flex items-end">
-          <Button variant="outline" className="w-full rounded-xl gap-2"><Plus size={16}/> Lançar Consumo</Button>
-        </div>
+      <div className="overflow-x-auto rounded-xl border border-border/50">
+        <table className="w-full text-sm">
+          <thead className="bg-accent/10">
+            <tr>
+              <th className="text-left p-3 font-medium text-muted-foreground">Operação</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Combustível</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">Litros/ha</th>
+              <th className="text-left p-3 font-medium text-muted-foreground">CO₂e (t/ha)</th>
+              {!locked && <th className="p-3"></th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/50">
+            {ops.map((op, i) => {
+              const co2 = ((EF_COMB[op.combustivel] ?? 0) * op.litros / 1000).toFixed(3)
+              return (
+                <tr key={i} className="bg-surface/50">
+                  <td className="p-2">
+                    <Select value={op.operacao} onValueChange={v => update(i,'operacao',v)} disabled={locked}>
+                      <SelectTrigger className="rounded-lg h-8 text-sm border-0 bg-transparent">
+                        <SelectValue placeholder="Selecionar..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OPERACOES.map(o => <SelectItem key={o} value={o}>{LABEL_OP[o]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    <Select value={op.combustivel} onValueChange={v => update(i,'combustivel',v)} disabled={locked}>
+                      <SelectTrigger className="rounded-lg h-8 text-sm border-0 bg-transparent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COMBUSTIVEIS.map(c => <SelectItem key={c} value={c}>{LABEL_COMB[c]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      type="number" min={0} step={0.5} value={op.litros || ''}
+                      onChange={e => update(i,'litros',Number(e.target.value))}
+                      disabled={locked}
+                      className="h-8 rounded-lg text-sm border-0 bg-transparent w-24"
+                    />
+                  </td>
+                  <td className="p-2 text-center">
+                    <span className={`text-xs font-medium ${Number(co2) > 0 ? 'text-warning' : 'text-success'}`}>{co2}</span>
+                  </td>
+                  {!locked && (
+                    <td className="p-2">
+                      <button onClick={() => setOps(prev => prev.filter((_,idx)=>idx!==i))} className="text-muted hover:text-danger">
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot className="border-t-2 border-border bg-surface">
+            <tr>
+              <td colSpan={2} className="p-3 text-sm font-semibold text-foreground">Total CO₂e Combustíveis</td>
+              <td></td>
+              <td className="p-3 text-center font-bold text-warning">{totalCO2.toFixed(3)} t/ha</td>
+              {!locked && <td></td>}
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      <Table>
-        <TableHeader className="bg-accent/5">
-          <TableRow>
-            <TableHead>Grupo de Operação</TableHead>
-            <TableHead>Combustível</TableHead>
-            <TableHead className="text-right">Volume Consumido</TableHead>
-            <TableHead className="text-right">Ação</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {registros.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell className="font-medium text-foreground">{r.operacao}</TableCell>
-              <TableCell>{r.comb}</TableCell>
-              <TableCell className="text-right font-medium">{r.litros}</TableCell>
-              <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-danger btn-micro">Excluir</Button></TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {totalCO2 > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-warning/5 border border-warning/20 rounded-xl text-sm text-warning">
+          <Info size={14} />
+          CO₂ de combustíveis será descontado das remoções líquidas (Scope 1 on-farm). Use etanol para reduzir impacto.
+        </div>
+      )}
 
-      <div className="flex justify-end pt-4">
-        <Button className="rounded-xl gap-2 bg-primary"><Save size={16} /> Salvar Etapa</Button>
-      </div>
+      {!locked && (
+        <Button variant="outline" className="w-full border-dashed gap-2 text-sm" onClick={() => setOps(prev => [...prev, { operacao:'', combustivel:'diesel', litros:0 }])}>
+          <Plus size={14} /> Adicionar Operação
+        </Button>
+      )}
+
+      {!locked && (
+        <div className="flex justify-end pt-4">
+          <Button className="rounded-xl gap-2" onClick={handleSave}><Save size={16} /> Salvar Rascunho</Button>
+        </div>
+      )}
     </div>
   )
 }

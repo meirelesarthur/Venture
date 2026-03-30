@@ -1,81 +1,209 @@
-import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, Plus, Save } from 'lucide-react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import { Droplets, Plus, Save, Trash2, Info } from 'lucide-react'
+import { useDataStore } from '@/store/data'
+import type { FertilizanteSint, FertilizanteOrg, Calcario } from '@/store/data'
+import { toast } from 'sonner'
 
-export default function FertilizacaoForm() {
-  const [registros, setRegistros] = useState([
-    { id: 1, tipo: 'Sintético N', produto: 'Ureia', quantidade: '25.000 kg', aplicacao: 'Lanços Cobertura' },
-    { id: 2, tipo: 'Corretivo', produto: 'Calcário Dolomítico', quantidade: '150.000 kg', aplicacao: 'Incorporado' },
-  ])
+// FERTILIZANTES SINTÉTICOS (Apêndice A lookup simplificado)
+const FERT_SINT = ['ureia','sulfato_amonio','nitrato_amonio','map','dap','kcl','superfosfato_simples','superfosfato_triplo','npk_formulado']
+const LABEL_FERT: Record<string,string> = {
+  ureia: 'Ureia (46-0-0)', sulfato_amonio: 'Sulfato de Amônio (21-0-0)', nitrato_amonio: 'Nitrato de Amônio (34-0-0)',
+  map: 'MAP (11-52-0)', dap: 'DAP (18-46-0)', kcl: 'Cloreto de Potássio - KCl',
+  superfosfato_simples: 'Superfosfato Simples', superfosfato_triplo: 'Superfosfato Triplo', npk_formulado: 'NPK Formulado'
+}
+const FERT_ORG = ['esterco_bovino','esterco_suino','cama_frango','composto_organico','biofertilizante','torta_mamona']
+const LABEL_ORG: Record<string,string> = {
+  esterco_bovino: 'Esterco Bovino', esterco_suino: 'Esterco Suíno', cama_frango: 'Cama de Frango',
+  composto_organico: 'Composto Orgânico', biofertilizante: 'Biofertilizante Líquido', torta_mamona: 'Torta de Mamona'
+}
+const CORRETIVOS = ['calcitico','dolomítico','gesso_agricola']
+const LABEL_CORRETIVO: Record<string,string> = {
+  calcitico: 'Calcário Calcítico', dolomítico: 'Calcário Dolomítico', gesso_agricola: 'Gesso Agrícola'
+}
+
+// NC_SF: % N no fertilizante (simplificado)
+const NC_SF: Record<string,number> = {
+  ureia: 0.46, sulfato_amonio: 0.21, nitrato_amonio: 0.34, map: 0.11, dap: 0.18,
+  kcl: 0, superfosfato_simples: 0, superfosfato_triplo: 0, npk_formulado: 0.1
+}
+
+interface Props { talhaoId: string; anoAgricola: number; locked: boolean; manejoId?: string }
+
+export default function FertilizacaoForm({ talhaoId, anoAgricola, locked, manejoId }: Props) {
+  const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
+  const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
+
+  const [sint, setSint] = useState<FertilizanteSint[]>(existente?.fertilizantesSint ?? [{ tipo: '', qtdKgHa: 0, usaInibidor: false }])
+  const [org, setOrg]   = useState<FertilizanteOrg[]>(existente?.fertilizantesOrg ?? [])
+  const [calc, setCalc] = useState<Calcario[]>(existente?.calcario ?? [])
+
+  useEffect(() => {
+    const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    setSint(m?.fertilizantesSint ?? [{ tipo: '', qtdKgHa: 0, usaInibidor: false }])
+    setOrg(m?.fertilizantesOrg ?? [])
+    setCalc(m?.calcario ?? [])
+  }, [talhaoId, anoAgricola])
+
+  const totalN = sint.reduce((acc, f) => acc + (NC_SF[f.tipo] ?? 0) * f.qtdKgHa, 0)
+  const estimatedN2O = +(totalN * 0.0047 * 44 / 28).toFixed(2) // kg N2O/ha → tCO2e/ha aproximado
+
+  const updateSint = (i: number, f: keyof FertilizanteSint, v: any) =>
+    setSint(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
+  const updateOrg  = (i: number, f: keyof FertilizanteOrg, v: any)  =>
+    setOrg (prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
+  const updateCalc = (i: number, f: keyof Calcario, v: any)           =>
+    setCalc(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
+
+  const handleSave = () => {
+    const payload = {
+      talhaoId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
+      fertilizantesSint: sint, fertilizantesOrg: org, calcario: calc,
+    }
+    if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
+    toast.success('Dados de fertilização salvos!')
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-border/50 pb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <AlertCircle className="text-primary" /> Uso de Fertilizantes e Corretivos
-          </h2>
-          <p className="text-sm text-muted-foreground">Registre os insumos aplicados na safra. Isso impacta as emissões da baseline (N2O).</p>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <Droplets className="text-primary" size={20} /> Fertilização e Adubação
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">Registre todos os insumos aplicados na safra.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6">
-        <div className="space-y-2">
-          <Label>Classe do Insumo</Label>
-          <Select defaultValue="sintetico_n">
-            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sintetico_n">Sintético - Nitrogênio</SelectItem>
-              <SelectItem value="sintetico_p">Sintético - Fósforo/Potássio</SelectItem>
-              <SelectItem value="organico">Orgânico (Esterco/Cama)</SelectItem>
-              <SelectItem value="corretivo">Corretivo (Calcário)</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* ── Sintéticos ───────────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-base font-semibold">Fertilizantes Sintéticos</Label>
+          <span className="text-xs text-muted bg-surface px-2 py-1 rounded-lg border border-border/50">
+            N total estimado: <strong>{totalN.toFixed(1)} kg N/ha</strong>
+          </span>
         </div>
-        <div className="space-y-2">
-          <Label>Nome do Produto/Composição</Label>
-          <Input placeholder="Ex: Ureia 46%" className="rounded-xl" />
-        </div>
-        <div className="space-y-2">
-          <Label>Quantidade Total (kg)</Label>
-          <Input type="number" placeholder="0" className="rounded-xl" />
-        </div>
-        <div className="space-y-2 flex items-end">
-          <Button variant="outline" className="w-full rounded-xl gap-2"><Plus size={16}/> Adicionar Aplicação</Button>
-        </div>
+
+        {sint.map((f, i) => (
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-4 border border-border/50 rounded-xl bg-surface/50 relative">
+            <div className="sm:col-span-4 space-y-1">
+              <Label className="text-xs">Produto *</Label>
+              <Select value={f.tipo} onValueChange={v => updateSint(i, 'tipo', v)} disabled={locked}>
+                <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>{FERT_SINT.map(t => <SelectItem key={t} value={t}>{LABEL_FERT[t]}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-3 space-y-1">
+              <Label className="text-xs">Dose (kg/ha)</Label>
+              <Input type="number" min={0} value={f.qtdKgHa || ''} onChange={e => updateSint(i,'qtdKgHa',Number(e.target.value))} disabled={locked} className="rounded-xl h-9 text-sm" />
+            </div>
+            <div className="sm:col-span-3 space-y-1">
+              <Label className="text-xs">Usa inibidor de urease?</Label>
+              <div className="flex items-center gap-2 h-9">
+                <Switch checked={f.usaInibidor} onCheckedChange={v => updateSint(i,'usaInibidor',v)} disabled={locked} />
+                <span className="text-xs text-muted">{f.usaInibidor ? 'Sim (EF reduzido)' : 'Não'}</span>
+              </div>
+            </div>
+            {NC_SF[f.tipo] > 0 && (
+              <div className="sm:col-span-1 text-center">
+                <span className="text-xs text-muted">NC: {(NC_SF[f.tipo]*100).toFixed(0)}%</span>
+              </div>
+            )}
+            {!locked && sint.length > 1 && (
+              <button className="sm:col-span-1 text-muted hover:text-danger" onClick={() => setSint(prev => prev.filter((_,idx)=>idx!==i))}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {!locked && (
+          <Button variant="outline" className="w-full border-dashed gap-2 text-sm" onClick={() => setSint(prev => [...prev, { tipo:'', qtdKgHa:0, usaInibidor:false }])}>
+            <Plus size={14} /> Adicionar Fertilizante Sintético
+          </Button>
+        )}
+
+        {totalN > 0 && (
+          <div className="flex items-center gap-2 p-3 bg-warning/5 border border-warning/20 rounded-xl text-sm text-warning">
+            <Info size={14} />
+            N₂O estimado (IPCC Tier 1): <strong>{estimatedN2O} tCO₂e/ha/ano</strong> (EF1 médio, sem inibidores)
+          </div>
+        )}
       </div>
 
-      <Table>
-        <TableHeader className="bg-accent/5">
-          <TableRow>
-            <TableHead>Classe</TableHead>
-            <TableHead>Produto</TableHead>
-            <TableHead>Método</TableHead>
-            <TableHead className="text-right">Quantidade Aplicada</TableHead>
-            <TableHead className="text-right">Ação</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {registros.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell className="font-medium text-foreground">{r.tipo}</TableCell>
-              <TableCell>{r.produto}</TableCell>
-              <TableCell>{r.aplicacao}</TableCell>
-              <TableCell className="text-right font-medium">{r.quantidade}</TableCell>
-              <TableCell className="text-right"><Button variant="ghost" size="sm" className="text-danger btn-micro">Excluir</Button></TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Separator />
 
-      <div className="flex justify-end pt-4">
-        <Button className="rounded-xl gap-2 bg-primary"><Save size={16} /> Salvar Etapa</Button>
+      {/* ── Orgânicos ─────────────────────────────────── */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">Fertilizantes Orgânicos</Label>
+        {org.map((f, i) => (
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-4 border border-border/50 rounded-xl bg-surface/50">
+            <div className="sm:col-span-6 space-y-1">
+              <Label className="text-xs">Tipo de Orgânico</Label>
+              <Select value={f.tipo} onValueChange={v => updateOrg(i,'tipo',v)} disabled={locked}>
+                <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>{FERT_ORG.map(t => <SelectItem key={t} value={t}>{LABEL_ORG[t]}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-4 space-y-1">
+              <Label className="text-xs">Dose (t/ha)</Label>
+              <Input type="number" min={0} step={0.1} value={f.qtdTHa || ''} onChange={e => updateOrg(i,'qtdTHa',Number(e.target.value))} disabled={locked} className="rounded-xl h-9 text-sm" />
+            </div>
+            {!locked && (
+              <button className="sm:col-span-2 text-muted hover:text-danger" onClick={() => setOrg(prev => prev.filter((_,idx)=>idx!==i))}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+        {!locked && (
+          <Button variant="outline" className="w-full border-dashed gap-2 text-sm" onClick={() => setOrg(prev => [...prev, { tipo:'', qtdTHa:0 }])}>
+            <Plus size={14} /> Adicionar Orgânico
+          </Button>
+        )}
       </div>
+
+      <Separator />
+
+      {/* ── Corretivos ────────────────────────────────── */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">Corretivos de Solo</Label>
+        <p className="text-xs text-muted">Calcário e gesso agrícola. Gesso = CO₂ nulo (metodologia VM0042).</p>
+        {calc.map((f, i) => (
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end p-4 border border-border/50 rounded-xl bg-surface/50">
+            <div className="sm:col-span-6 space-y-1">
+              <Label className="text-xs">Tipo de Corretivo</Label>
+              <Select value={f.tipo} onValueChange={v => updateCalc(i,'tipo',v)} disabled={locked}>
+                <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>{CORRETIVOS.map(t => <SelectItem key={t} value={t}>{LABEL_CORRETIVO[t]}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-4 space-y-1">
+              <Label className="text-xs">Dose (t/ha)</Label>
+              <Input type="number" min={0} step={0.1} value={f.qtdTHa || ''} onChange={e => updateCalc(i,'qtdTHa',Number(e.target.value))} disabled={locked} className="rounded-xl h-9 text-sm" />
+            </div>
+            {!locked && (
+              <button className="sm:col-span-2 text-muted hover:text-danger" onClick={() => setCalc(prev => prev.filter((_,idx)=>idx!==i))}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+        {!locked && (
+          <Button variant="outline" className="w-full border-dashed gap-2 text-sm" onClick={() => setCalc(prev => [...prev, { tipo:'', qtdTHa:0 }])}>
+            <Plus size={14} /> Adicionar Corretivo
+          </Button>
+        )}
+      </div>
+
+      {!locked && (
+        <div className="flex justify-end pt-4">
+          <Button className="rounded-xl gap-2" onClick={handleSave}><Save size={16} /> Salvar Rascunho</Button>
+        </div>
+      )}
     </div>
   )
 }

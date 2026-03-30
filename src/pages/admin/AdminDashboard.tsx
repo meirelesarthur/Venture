@@ -1,10 +1,41 @@
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Link } from 'react-router-dom'
-import { Users, FileText, AlertTriangle, ArrowRight, Settings, MapPin } from 'lucide-react'
+import { useDataStore } from '@/store/data'
+import {
+  Users, Map, AlertTriangle, CheckCircle2, Clock, ArrowRight,
+  TrendingUp, DollarSign, Cpu, Building2, Settings
+} from 'lucide-react'
 
 export default function AdminDashboard() {
+  const { leads, clientes, parceiros, controlSites, manejo, fazendas } = useDataStore()
+
+  const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
+  const mrvPendente = manejo.filter(m => m.status === 'pendente').length
+  const mrvCorrecao = manejo.filter(m => m.status === 'correcao').length
+  const taxaConversao = leads.length > 0
+    ? Math.round((leads.filter(l => l.status === 'contratado' || l.status === 'efetivado').length / leads.length) * 100)
+    : 0
+
+  const ALERTAS = [
+    ...(controlSites.filter(s => s.similaridade < 9).length > 0 ? [{
+      tipo: 'danger' as const,
+      texto: `${controlSites.filter(s => s.similaridade < 9).length} Control Site(s) com similaridade abaixo de 9km — revisão necessária.`,
+      link: '/admin/control-sites',
+    }] : []),
+    ...(mrvPendente > 0 ? [{
+      tipo: 'warning' as const,
+      texto: `${mrvPendente} lote(s) MRV aguardando validação na fila.`,
+      link: '/admin/validacao',
+    }] : []),
+    ...(mrvCorrecao > 0 ? [{
+      tipo: 'danger' as const,
+      texto: `${mrvCorrecao} lote(s) MRV com correção solicitada ainda em aberto.`,
+      link: '/admin/validacao',
+    }] : []),
+  ]
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -12,114 +43,138 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold text-foreground">Painel Administrador</h1>
           <p className="text-muted">Visão global da plataforma e gestão de auditoria.</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild className="gap-2">
-            <Link to="/admin/parametros"><Settings size={16} /> Parâmetros globais</Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline" className="gap-2 rounded-xl">
+          <Link to="/admin/parametros"><Settings size={16} /> Parâmetros globais</Link>
+        </Button>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="border-border/50 shadow-sm bg-surface">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted">Clientes Ativos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
+      {/* Alertas */}
+      {ALERTAS.length > 0 && (
+        <Card className="border-warning/30 bg-warning/5 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-warning flex items-center gap-2">
+              <AlertTriangle size={16} /> Alertas de Plataforma
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">42</div>
-            <p className="text-xs text-muted-foreground mt-1">Produtores c/ MRV em andamento</p>
+          <CardContent className="space-y-2">
+            {ALERTAS.map((a, i) => (
+              <div key={i} className={`flex items-center justify-between gap-3 p-3 rounded-xl border text-sm ${a.tipo === 'danger' ? 'bg-danger/5 border-danger/20 text-danger' : 'bg-warning/5 border-warning/20 text-warning'}`}>
+                <span>{a.texto}</span>
+                <Button size="sm" variant="ghost" asChild className="h-7 text-xs shrink-0 rounded-lg">
+                  <Link to={a.link}>Revisar <ArrowRight size={12} /></Link>
+                </Button>
+              </div>
+            ))}
           </CardContent>
         </Card>
-        
-        <Card className="border-border/50 shadow-sm bg-surface">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted">Parceiros Originadores</CardTitle>
-            <Users className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">18</div>
-            <p className="text-xs text-muted-foreground mt-1">Consultorias com leads convertidos</p>
-          </CardContent>
-        </Card>
+      )}
 
-        <Card className="border-border/50 shadow-sm bg-surface">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted">Control Sites Configurados</CardTitle>
-            <MapPin className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-foreground">15</div>
-            <p className="text-xs text-muted-foreground mt-1">3 em alerta de similaridade VMD0053</p>
-          </CardContent>
-        </Card>
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Clientes Ativos', value: clientes.length, sub: 'Produtores com MRV em andamento', Icon: Users, color: 'text-primary', bg: '' },
+          { label: 'Parceiros', value: parceiros.filter(p=>p.status==='ativo').length, sub: 'Consultores com leads convertidos', Icon: Users, color: 'text-success', bg: 'bg-success/5 border-success/20' },
+          { label: 'Control Sites', value: controlSites.length, sub: `${controlSites.filter(s=>s.similaridade<9).length} em alerta de similaridade`, Icon: Map, color: 'text-warning', bg: 'bg-warning/5 border-warning/20' },
+          { label: 'Validação Pendente', value: mrvPendente, sub: 'Lotes MRV aguardando revisão', Icon: Clock, color: 'text-danger', bg: 'bg-danger/5 border-danger/20' },
+        ].map(kpi => (
+          <Card key={kpi.label} className={`border-border/50 shadow-sm bg-surface ${kpi.bg}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm text-muted font-medium">{kpi.label}</CardTitle>
+              <kpi.Icon className={`h-4 w-4 ${kpi.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-4xl font-bold ${kpi.color}`}>{kpi.value}</div>
+              <p className="text-xs text-muted-foreground mt-1">{kpi.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="border-danger/20 bg-danger/5 shadow-sm">
-          <CardHeader className="pb-3 border-b border-danger/10">
-            <CardTitle className="text-lg flex items-center gap-2 text-danger">
-              <AlertTriangle size={20} /> Alertas de Plataforma
-            </CardTitle>
+        {/* Leads em análise */}
+        <Card className="border-border/50 shadow-sm bg-surface">
+          <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
+            <CardTitle className="text-lg">Leads para Análise ({leadsNovos})</CardTitle>
+            <Button variant="ghost" size="sm" asChild className="rounded-lg"><Link to="/admin/leads">Ver todos <ArrowRight size={14} /></Link></Button>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-danger/10">
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-foreground text-sm">Control Sites Insuficientes (Região Sul)</h4>
-                  <p className="text-xs text-muted">Apenas 2 cadastrados. Mínimo de 3 requeridos na metodologia.</p>
+            <div className="divide-y divide-border/50">
+              {leads.filter(l => l.status === 'novo' || l.status === 'em_analise').slice(0, 4).map(l => (
+                <div key={l.id} className="flex items-center justify-between px-5 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{l.nome}</p>
+                    <p className="text-xs text-muted">{l.fazenda} — {l.area.toLocaleString('pt-BR')} ha — {l.data}</p>
+                  </div>
+                  <Badge variant="outline" className={`text-xs shadow-none ${l.status === 'novo' ? 'bg-muted/20 text-muted-foreground' : 'bg-warning/10 text-warning border-warning/20'}`}>
+                    {l.status === 'novo' ? 'Novo' : 'Em Análise'}
+                  </Badge>
                 </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/admin/control-sites" className="text-danger">Revisar</Link>
-                </Button>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-foreground text-sm">Cotação PTAX desatualizada</h4>
-                  <p className="text-xs text-muted">Falha na integração com BCB hoje. Usando fallback.</p>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/admin/parametros" className="text-primary">Resolver</Link>
-                </Button>
-              </div>
+              ))}
+              {leadsNovos === 0 && <div className="text-center py-8 text-muted text-sm">Nenhum lead pendente.</div>}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardHeader className="pb-3 border-b border-border/50">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText size={20} className="text-primary" /> Fila de Validação (MRV)
-            </CardTitle>
+        {/* Fila de Validação MRV */}
+        <Card className="border-border/50 shadow-sm bg-surface">
+          <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
+            <CardTitle className="text-lg">Fila de Validação MRV</CardTitle>
+            <Button variant="ghost" size="sm" asChild className="rounded-lg"><Link to="/admin/validacao">Ver fila <ArrowRight size={14} /></Link></Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/50">
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-foreground text-sm">Fazenda Boa Esperança</h4>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Lavoura</Badge>
+              {manejo.filter(m => m.status === 'pendente' || m.status === 'correcao').slice(0, 4).map(m => {
+                const talhao = useDataStore.getState().talhoes.find(t => t.id === m.talhaoId)
+                const fazenda = fazendas.find(f => f.id === talhao?.fazendaId)
+                return (
+                  <div key={m.id} className="flex items-center justify-between px-5 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{fazenda?.nome ?? 'Fazenda'}</p>
+                      <p className="text-xs text-muted">{talhao?.nome} | Safra {m.anoAgricola}/{m.anoAgricola+1} | {m.cultura ?? '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`text-xs shadow-none ${m.status === 'pendente' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-danger/10 text-danger border-danger/20'}`}>
+                        {m.status === 'pendente' ? 'Aguardando' : 'Correção'}
+                      </Badge>
+                      <Button size="sm" asChild className="h-7 text-xs rounded-lg">
+                        <Link to="/admin/validacao">Revisar</Link>
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted mt-1">Aguardando aprovação de dados de plantio.</p>
+                )
+              })}
+              {manejo.filter(m => m.status === 'pendente' || m.status === 'correcao').length === 0 && (
+                <div className="text-center py-8 text-muted text-sm flex items-center justify-center gap-2">
+                  <CheckCircle2 size={16} className="text-success" /> Fila limpa!
                 </div>
-                <Button size="sm" variant="secondary" asChild className="gap-2">
-                  <Link to="/admin/clientes/1">Revisar <ArrowRight size={14} /></Link>
-                </Button>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-foreground text-sm">Sítio das Águas</h4>
-                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">Documentos</Badge>
-                  </div>
-                  <p className="text-xs text-muted mt-1">Notas fiscais Inibidores submetidas.</p>
-                </div>
-                <Button size="sm" variant="secondary" asChild className="gap-2">
-                  <Link to="/admin/clientes/2">Revisar <ArrowRight size={14} /></Link>
-                </Button>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Atalhos Admin */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Gestão de Fazendas', desc: 'Cadastrar e editar talhões, dados de solo', icon: Building2, href: '/admin/fazendas', color: 'text-primary' },
+          { label: 'Motor de Cálculos', desc: 'Executar RothC e QA3 por propriedade', icon: Cpu, href: '/admin/motor/f1', color: 'text-warning' },
+          { label: 'Parâmetros Globais', desc: 'PTAX, preço VCU, taxas e fatores globais', icon: Settings, href: '/admin/parametros', color: 'text-success' },
+        ].map(card => (
+          <Card key={card.label} className="border-border/50 shadow-sm hover:border-primary/30 transition-colors bg-surface">
+            <CardContent className="p-5 flex items-start gap-4">
+              <div className={`h-10 w-10 rounded-xl bg-background flex items-center justify-center flex-shrink-0`}>
+                <card.icon size={20} className={card.color} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground text-sm">{card.label}</p>
+                <p className="text-xs text-muted mt-0.5">{card.desc}</p>
+              </div>
+              <Button size="sm" variant="ghost" asChild className="rounded-lg h-8 shrink-0">
+                <Link to={card.href}><ArrowRight size={14} /></Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   )

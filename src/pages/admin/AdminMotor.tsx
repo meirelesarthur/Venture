@@ -2,157 +2,256 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Play, CheckCircle2, RefreshCw, FileText, Settings, Leaf, Users, AlertCircle, Tractor, FileCheck } from 'lucide-react'
-import { toast } from 'sonner'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { ArrowLeft, Play, CheckCircle2, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
+import { useDataStore } from '@/store/data'
+import { rodarMotorCompleto } from '@/motor'
 
-// Formulários Compartilhados (MRV)
-import LavouraForm from '@/pages/cliente/mrv/LavouraForm'
-import PecuariaForm from '@/pages/cliente/mrv/PecuariaForm'
-import FertilizacaoForm from '@/pages/cliente/mrv/FertilizacaoForm'
-import OperacionalForm from '@/pages/cliente/mrv/OperacionalForm'
-import DocumentosForm from '@/pages/cliente/mrv/DocumentosForm'
+interface LogEntry { step: string; percent: number }
 
 export default function AdminMotor() {
   const { fazendaId } = useParams()
-  const [status, setStatus] = useState<'idle' | 'running' | 'done'>('idle')
-  const [progress, setProgress] = useState(0)
+  const { fazendas, talhoes, manejo, dadosClimaticos, parametros, resultadosMotor, addResultadoMotor, clearResultadosTalhao, addNotificacao } = useDataStore()
 
-  const handleRunMotor = () => {
+  const fazenda = fazendas.find(f => f.id === fazendaId) ?? fazendas[0]
+  const meusTalhoes = talhoes.filter(t => t.fazendaId === fazenda?.id && t.tipo === 'projeto')
+
+  const [talhaoId, setTalhaoId] = useState(meusTalhoes[0]?.id ?? '')
+  const [anoAgricola, setAnoAgricola] = useState('2025')
+  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [progresso, setProgresso] = useState(0)
+  const [log, setLog] = useState<LogEntry[]>([])
+  const [expandedResult, setExpandedResult] = useState<string | null>(null)
+
+  const talhaoSel  = talhoes.find(t => t.id === talhaoId)
+  const resultados = resultadosMotor.filter(r => r.talhaoId === talhaoId && r.anoAgricola === Number(anoAgricola))
+
+  const anos = [2024, 2025, 2026]
+
+  const handleRodar = async () => {
+    if (!talhaoSel) { toast.error('Selecione um talhão.'); return }
+
+    const anoNum   = Number(anoAgricola)
+    const manejoProj = manejo.find(m => m.talhaoId === talhaoId && m.anoAgricola === anoNum && m.cenario === 'projeto')
+
+    if (!manejoProj) {
+      toast.error(`Não há dados MRV (projeto) para ${talhaoSel.nome} — Safra ${anoNum}.`)
+      return
+    }
+
+    const manejoBase = manejo.find(m => m.talhaoId === talhaoId && m.cenario === 'baseline') ?? null
+    const clima      = dadosClimaticos.find(d => d.talhaoId === talhaoId) ?? null
+
     setStatus('running')
-    setProgress(0)
-    
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setStatus('done')
-          toast.success('Motor de Cálculos concluído. Relatório técnico gerado.')
-          return 100
-        }
-        return prev + 10
+    setProgresso(0)
+    setLog([])
+    clearResultadosTalhao(talhaoId, anoNum)
+
+    try {
+      const resultado = await rodarMotorCompleto(
+        talhaoSel,
+        manejoProj,
+        manejoBase,
+        clima,
+        parametros,
+        (step, percent) => {
+          setLog(prev => [...prev, { step, percent }])
+          setProgresso(percent)
+        },
+      )
+
+      addResultadoMotor(resultado)
+      addNotificacao({
+        para: 'cliente',
+        texto: `Motor executado: ${talhaoSel.nome} — ${resultado.vcusEmitidosTotal.toFixed(0)} VCUs calculados para safra ${anoNum}.`,
+        link: '/dashboard/resultados',
       })
-    }, 300)
+      setStatus('done')
+      toast.success(`Motor concluído! ${resultado.vcusEmitidosTotal.toFixed(1)} VCUs emitidos.`)
+    } catch (err) {
+      setStatus('error')
+      toast.error('Erro ao executar o motor de cálculos.')
+    }
   }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl">
-       <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="rounded-full">
-          <Link to="/admin/clientes"><ArrowLeft size={20} /></Link>
+          <Link to="/admin/fazendas"><ArrowLeft size={20} /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Motor de Cálculos VMD0053</h1>
-          <p className="text-muted">Fazenda ID: {fazendaId || '001'} - Cliente: João da Silva</p>
+          <h1 className="text-2xl font-bold text-foreground">Motor de Cálculos — RothC + IPCC</h1>
+          <p className="text-muted">{fazenda?.nome} · VM0042 v2.2 · VMD0053 v2.1</p>
         </div>
       </div>
 
-      <Tabs defaultValue="lavoura" className="w-full">
-        <TabsList className="flex w-full mb-6 overflow-x-auto justify-start border-b border-border/50 bg-background pb-0 rounded-none h-auto gap-4">
-          <TabsTrigger value="lavoura" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary pb-3 rounded-none bg-transparent">
-            <Leaf size={16} className="mr-2" /> Lavoura
-          </TabsTrigger>
-          <TabsTrigger value="pecuaria" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary pb-3 rounded-none bg-transparent">
-            <Users size={16} className="mr-2" /> Pecuária
-          </TabsTrigger>
-          <TabsTrigger value="fertilizacao" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary pb-3 rounded-none bg-transparent">
-            <AlertCircle size={16} className="mr-2" /> Adubação
-          </TabsTrigger>
-          <TabsTrigger value="operacional" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary pb-3 rounded-none bg-transparent">
-            <Tractor size={16} className="mr-2" /> Máquinas
-          </TabsTrigger>
-          <TabsTrigger value="documentos" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary pb-3 rounded-none bg-transparent">
-            <FileCheck size={16} className="mr-2" /> Evidências
-          </TabsTrigger>
-          <TabsTrigger value="motor" className="data-[state=active]:bg-success/10 data-[state=active]:text-success data-[state=active]:border-success pb-3 rounded-none bg-transparent text-foreground/50 border-b-2 border-transparent">
-            <Settings size={16} className="mr-2" /> Rodar Motor
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="lavoura"><Card className="p-6 border-border/50"><LavouraForm/></Card></TabsContent>
-        <TabsContent value="pecuaria"><Card className="p-6 border-border/50"><PecuariaForm/></Card></TabsContent>
-        <TabsContent value="fertilizacao"><Card className="p-6 border-border/50"><FertilizacaoForm/></Card></TabsContent>
-        <TabsContent value="operacional"><Card className="p-6 border-border/50"><OperacionalForm/></Card></TabsContent>
-        <TabsContent value="documentos"><Card className="p-6 border-border/50"><DocumentosForm/></Card></TabsContent>
-        
-        <TabsContent value="motor" className="mt-0">
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="md:col-span-2 border-border/50 shadow-sm">
-              <CardHeader className="bg-surface/50 border-b pb-4">
-                <CardTitle className="text-lg">Status dos Dados Formados (MRV)</CardTitle>
-                <CardDescription>Critérios para execução do RothC. Devem estar todos válidos.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-4">
-                <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
-                  <div>
-                    <h4 className="font-medium text-sm">Dados de Solo (Baseline)</h4>
-                    <p className="text-xs text-muted">Amostras de laboratório importadas</p>
-                  </div>
-                  <Badge className="bg-success/10 text-success border-success/20 shadow-none"><CheckCircle2 className="w-3 h-3 mr-1" /> Válido</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
-                  <div>
-                    <h4 className="font-medium text-sm">Práticas de Lavoura & Fertilizantes</h4>
-                    <p className="text-xs text-muted">N2O emissions e histórico 3 anos completos</p>
-                  </div>
-                  <Badge className="bg-success/10 text-success border-success/20 shadow-none"><CheckCircle2 className="w-3 h-3 mr-1" /> Válido</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-secondary/20 rounded-lg border border-border/50">
-                  <div>
-                    <h4 className="font-medium text-sm">Control Sites Vinculados</h4>
-                    <p className="text-xs text-muted">Mínimo de 3 sites proxy atendidos</p>
-                  </div>
-                  <Badge className="bg-success/10 text-success border-success/20 shadow-none"><CheckCircle2 className="w-3 h-3 mr-1" /> Válido</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/50 shadow-sm flex flex-col">
-              <CardHeader className="bg-surface/50 border-b pb-4">
-                <CardTitle className="text-lg">Execução</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 flex-1 flex flex-col justify-center gap-6">
-                
-                <div className="text-center space-y-2">
-                  <div className="text-4xl font-bold text-foreground">
-                    {status === 'done' ? '1.245' : '---'}
-                  </div>
-                  <p className="text-sm text-muted">tCO₂e (Projeção Ano 1)</p>
-                </div>
-
-                {status === 'running' && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-primary font-medium">
-                      <span>Calculando equações diferenciais...</span>
-                      <span>{progress}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
-                )}
-
-                {status === 'idle' && (
-                  <Button onClick={handleRunMotor} className="w-full gap-2 text-md h-12 rounded-xl">
-                    <Play size={18} /> Rodar Motor (RothC + IPCC)
-                  </Button>
-                )}
-
-                {status === 'done' && (
-                  <div className="space-y-3">
-                    <Button variant="outline" className="w-full gap-2 text-success border-success/50 bg-success/5 rounded-xl">
-                      <FileText size={16} /> Relatório VCU Emitido
-                    </Button>
-                    <Button variant="ghost" onClick={handleRunMotor} className="w-full gap-2 text-muted-foreground rounded-xl">
-                      <RefreshCw size={14} /> Recalcular Parâmetros
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      {/* Seletores */}
+      <Card className="border-border/50 shadow-sm bg-surface">
+        <CardHeader className="border-b bg-surface/50 pb-4">
+          <CardTitle className="text-base">Configuração da Execução</CardTitle>
+          <CardDescription>Selecione talhão, ano e cenário antes de rodar.</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-5 grid sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Talhão de Projeto</Label>
+            <Select value={talhaoId} onValueChange={setTalhaoId}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Selecionar talhão..." />
+              </SelectTrigger>
+              <SelectContent>
+                {meusTalhoes.map(t => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.nome} ({t.areaHa} ha){t.dadosValidados ? ' ✓' : ' ⚠'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </TabsContent>
-      </Tabs>
+          <div className="space-y-2">
+            <Label>Ano Agrícola</Label>
+            <Select value={anoAgricola} onValueChange={setAnoAgricola}>
+              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {anos.map(a => <SelectItem key={a} value={String(a)}>{a}/{a+1}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Log de execução */}
+        <Card className="md:col-span-2 border-border/50 shadow-sm">
+          <CardHeader className="border-b bg-surface/50 pb-4">
+            <CardTitle className="text-base">Log de Execução</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {status === 'idle' && log.length === 0 && (
+              <div className="text-center py-8 text-muted text-sm">
+                Configure os parâmetros e clique em "Rodar Motor".
+              </div>
+            )}
+            <div className="space-y-1 font-mono text-xs max-h-72 overflow-y-auto">
+              {log.map((entry, i) => (
+                <div key={i} className={`flex items-center gap-3 py-1 ${entry.percent === 100 ? 'text-success font-bold' : 'text-foreground/80'}`}>
+                  <span className="text-muted w-10 shrink-0">[{String(entry.percent).padStart(3)}%]</span>
+                  <span>{entry.step}</span>
+                </div>
+              ))}
+            </div>
+            {status === 'running' && (
+              <div className="mt-4 space-y-2">
+                <Progress value={progresso} className="h-2" />
+                <p className="text-xs text-center text-primary animate-pulse">Calculando...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Painel de execução */}
+        <Card className="border-border/50 shadow-sm flex flex-col">
+          <CardHeader className="border-b bg-surface/50 pb-4">
+            <CardTitle className="text-base">Execução</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 flex-1 flex flex-col justify-center gap-6">
+            <div className="text-center space-y-2">
+              <div className="text-4xl font-bold text-foreground">
+                {status === 'done' && resultados.length > 0
+                  ? resultados[resultados.length-1].vcusEmitidosTotal.toFixed(1)
+                  : '---'}
+              </div>
+              <p className="text-sm text-muted">VCUs emitidos (total)</p>
+              {status === 'done' && resultados.length > 0 && (
+                <p className="text-xs text-success">
+                  {resultados[resultados.length-1].vcusEmitidosHa.toFixed(2)} tCO₂e/ha
+                </p>
+              )}
+            </div>
+
+            {status === 'idle' && (
+              <Button onClick={handleRodar} className="w-full gap-2 h-12 rounded-xl">
+                <Play size={18} /> Rodar Motor (RothC + IPCC)
+              </Button>
+            )}
+            {status === 'running' && (
+              <Button disabled className="w-full gap-2 h-12 rounded-xl opacity-70">
+                <RefreshCw size={16} className="animate-spin" /> Calculando...
+              </Button>
+            )}
+            {(status === 'done' || status === 'error') && (
+              <div className="space-y-3">
+                {status === 'done' && (
+                  <div className="flex items-center gap-2 justify-center text-xs text-success">
+                    <CheckCircle2 size={14} /> Cálculo concluído com sucesso
+                  </div>
+                )}
+                <Button onClick={handleRodar} variant="outline" className="w-full gap-2 rounded-xl">
+                  <RefreshCw size={14} /> Recalcular
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Histórico de resultados */}
+      {resultados.length > 0 && (
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="border-b bg-surface/50 pb-4">
+            <CardTitle className="text-base">Resultado Detalhado — {talhaoSel?.nome} · Safra {anoAgricola}/{Number(anoAgricola)+1}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            {resultados.map(r => (
+              <div key={r.id} className="border border-border/50 rounded-xl overflow-hidden">
+                <button
+                  className="flex items-center justify-between w-full p-4 bg-surface/30 hover:bg-accent/5 text-left"
+                  onClick={() => setExpandedResult(expandedResult === r.id ? null : r.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    {expandedResult === r.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <div>
+                      <p className="text-sm font-semibold">Motor v{r.versaoMotor} · {new Date(r.rodadoEm).toLocaleString('pt-BR')}</p>
+                      <p className="text-xs text-muted">Buffer: {(r.bufferPoolRate*100).toFixed(0)}% · Incerteza SOC: {(r.uncCo2*100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-success">{r.vcusEmitidosTotal.toFixed(1)}</p>
+                    <p className="text-xs text-muted">VCUs totais</p>
+                  </div>
+                </button>
+
+                {expandedResult === r.id && (
+                  <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm border-t border-border/50">
+                    {[
+                      { label: 'SOC Baseline', val: `${r.socBaselineTcHa.toFixed(2)} tC/ha`, color: '' },
+                      { label: 'SOC Projeto', val: `${r.socProjetoTcHa.toFixed(2)} tC/ha`, color: 'text-success' },
+                      { label: 'ΔC orgânico', val: `${r.deltaSocTcHa.toFixed(3)} tC/ha`, color: r.deltaSocTcHa>0?'text-success':'text-danger' },
+                      { label: 'Remoção CO₂ (CR_t)', val: `${r.crTTco2eHa.toFixed(3)} tCO₂e/ha`, color: 'text-primary' },
+                      { label: 'Δ N₂O', val: `${r.deltaN2oTco2eHa.toFixed(4)} tCO₂e/ha`, color: r.deltaN2oTco2eHa>0?'text-success':'' },
+                      { label: 'Δ CH₄', val: `${r.deltaCh4Tco2eHa.toFixed(4)} tCO₂e/ha`, color: r.deltaCh4Tco2eHa>0?'text-success':'' },
+                      { label: 'CO₂ combustíveis', val: `${r.co2FfTco2eHa.toFixed(4)} tCO₂e/ha`, color: '' },
+                      { label: 'CO₂ calagem', val: `${r.co2LimeTco2eHa.toFixed(4)} tCO₂e/ha`, color: '' },
+                      { label: 'ER_t (reduções)', val: `${r.erTTco2eHa.toFixed(3)} tCO₂e/ha`, color: 'text-success' },
+                      { label: 'ERR_net (bruto)', val: `${r.errNetTco2eHa.toFixed(3)} tCO₂e/ha`, color: '' },
+                      { label: 'Buffer pool', val: `${(r.bufferPoolRate*100).toFixed(0)}%`, color: 'text-warning' },
+                      { label: 'VCUs/ha', val: `${r.vcusEmitidosHa.toFixed(3)}`, color: 'text-success font-bold' },
+                    ].map(item => (
+                      <div key={item.label} className="bg-background rounded-lg p-3">
+                        <p className="text-xs text-muted">{item.label}</p>
+                        <p className={`font-semibold mt-0.5 ${item.color}`}>{item.val}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

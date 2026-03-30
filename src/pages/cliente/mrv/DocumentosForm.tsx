@@ -1,67 +1,133 @@
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { FileText, UploadCloud, FileCheck2, Trash2, Send } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { FileText, UploadCloud, CheckCircle2, Clock, Trash2, ExternalLink } from 'lucide-react'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
-export default function DocumentosForm() {
-  const [docs, setDocs] = useState([
-    { id: 1, nome: 'CAR_Fazenda_Boa_Vista.pdf', tipo: 'CAR/Geo', data: '12/10/2026', size: '2.4 MB' },
-    { id: 2, nome: 'NFs_Calcario_Abril.pdf', tipo: 'Nota Fiscal', data: '05/11/2026', size: '1.1 MB' },
-  ])
+interface Doc { name: string; type: string; size: string; status: 'enviado' | 'aprovado'; url: string }
+
+const CATEGORIAS = [
+  { id: 'laudo_solo',   label: 'Laudos de Solo (Laboratório)',    desc: 'PDF com análises de SOC%, BD, textura',   accept: '.pdf', required: true },
+  { id: 'fotos',        label: 'Fotos Geolocalizadas',             desc: 'JPEG/PNG com EXIF de GPS',                accept: 'image/*', required: true },
+  { id: 'nfe_insumos',  label: 'Notas Fiscais de Insumos',         desc: 'PDF — fertilizantes, sementes, defensivos',accept: '.pdf', required: false },
+  { id: 'kml_atualiz',  label: 'KML / Shapefile Atualizado',       desc: 'Talhões do projeto com delimitação atual', accept: '.kml,.kmz,.zip', required: false },
+  { id: 'crea_anotacao', label: 'ART / RRT Agronômico',            desc: 'Anotação de responsabilidade técnica',     accept: '.pdf', required: false },
+]
+
+const MOCK_DOCS: Doc[] = [
+  { name: 'laudo_solo_t1_2025.pdf', type: 'laudo_solo', size: '1.2 MB', status: 'aprovado', url: '#' },
+  { name: 'fotos_talhao_a1.zip', type: 'fotos', size: '18.5 MB', status: 'enviado', url: '#' },
+]
+
+export default function DocumentosForm({ locked }: { talhaoId?: string; anoAgricola?: number; locked: boolean }) {
+  const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS)
+  const [uploading, setUploading] = useState<string | null>(null)
+
+  const handleUpload = (catId: string, file: File) => {
+    setUploading(catId)
+    setTimeout(() => {
+      setDocs(prev => [...prev.filter(d => d.type !== catId), {
+        name: file.name, type: catId,
+        size: `${(file.size / 1048576).toFixed(1)} MB`,
+        status: 'enviado', url: URL.createObjectURL(file),
+      }])
+      setUploading(null)
+      toast.success(`${file.name} enviado com sucesso!`)
+    }, 1500)
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-border/50 pb-4">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <FileText className="text-primary" /> Central de Documentos
-          </h2>
-          <p className="text-sm text-muted-foreground">Upload de evidências, shapefiles e notas fiscais exigidos pela certificadora.</p>
-        </div>
+      <div>
+        <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <FileText className="text-primary" size={20} /> Evidências e Documentos
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">Envie os laudos e evidências exigidos para a auditoria VVB.</p>
       </div>
 
-      <Card className="border-dashed border-2 border-border/60 bg-surface/30">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <UploadCloud size={32} className="text-primary" />
-          </div>
-          <h3 className="text-lg font-medium">Arraste seus arquivos aqui</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-            Formatos suportados: PDF, JPG, PNG, e ZIP (contendo KML/SHP). Tamanho máximo: 50MB por arquivo.
-          </p>
-          <Button variant="outline" className="mt-6 rounded-xl shadow-sm">
-            Selecionar do Computador
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4 pt-4">
-        <h3 className="font-medium text-foreground">Arquivos Anexados ({docs.length})</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {docs.map((doc) => (
-            <div key={doc.id} className="p-4 rounded-xl border border-border/50 bg-surface flex items-start justify-between gap-4 group hover:bg-muted/5 transition-colors">
-              <div className="flex gap-3 items-start overflow-hidden">
-                <FileCheck2 size={24} className="text-success shrink-0" />
-                <div className="overflow-hidden">
-                  <p className="font-medium text-sm truncate">{doc.nome}</p>
-                  <p className="text-xs text-muted-foreground flex gap-2 mt-1">
-                    <span>{doc.tipo}</span> • <span>{doc.size}</span> • <span>{doc.data}</span>
-                  </p>
+      <div className="space-y-4">
+        {CATEGORIAS.map(cat => {
+          const doc = docs.find(d => d.type === cat.id)
+          const isUploading = uploading === cat.id
+          return (
+            <div key={cat.id} className={cn(
+              'border rounded-xl p-4 space-y-3 transition-colors',
+              doc?.status === 'aprovado' ? 'border-success/30 bg-success/5' :
+              doc ? 'border-primary/30 bg-primary/5' : 'border-border/50 bg-surface/50'
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">{cat.label}</p>
+                    {cat.required && <span className="text-xs text-danger font-medium">Obrigatório</span>}
+                  </div>
+                  <p className="text-xs text-muted mt-0.5">{cat.desc}</p>
                 </div>
+
+                {doc ? (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {doc.status === 'aprovado' && (
+                      <Badge className="bg-success/10 text-success border-success/20 shadow-none text-xs">
+                        <CheckCircle2 size={11} className="mr-1" /> Aprovado
+                      </Badge>
+                    )}
+                    {doc.status === 'enviado' && (
+                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 shadow-none text-xs">
+                        <Clock size={11} className="mr-1" /> Em Revisão
+                      </Badge>
+                    )}
+                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-primary hover:text-primary/80"><ExternalLink size={14} /></a>
+                    {!locked && doc.status !== 'aprovado' && (
+                      <button onClick={() => setDocs(prev => prev.filter(d => d.type !== cat.id))} className="text-muted hover:text-danger">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ) : null}
               </div>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger btn-micro shrink-0">
-                <Trash2 size={16} />
-              </Button>
+
+              {doc ? (
+                <div className="flex items-center gap-3 p-2.5 bg-background/50 rounded-lg border border-border/30">
+                  <FileText size={16} className="text-muted flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground truncate">{doc.name}</p>
+                    <p className="text-xs text-muted">{doc.size}</p>
+                  </div>
+                </div>
+              ) : (
+                !locked && (
+                  <label className={cn(
+                    'flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+                    isUploading ? 'border-primary/40 bg-primary/5' : 'border-border/50 hover:border-primary/40 hover:bg-primary/5'
+                  )}>
+                    <input
+                      type="file" accept={cat.accept} className="hidden"
+                      onChange={e => { if (e.target.files?.[0]) handleUpload(cat.id, e.target.files[0]) }}
+                    />
+                    {isUploading ? (
+                      <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    ) : (
+                      <UploadCloud size={24} className="text-muted" />
+                    )}
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-foreground">{isUploading ? 'Enviando...' : 'Clique para enviar'}</p>
+                      <p className="text-xs text-muted">{cat.accept.replace(/\./g,'').toUpperCase().replace(/,/g,', ')}</p>
+                    </div>
+                  </label>
+                )
+              )}
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
-      <div className="flex justify-end pt-8 border-t border-border/50">
-        <Button className="rounded-xl gap-2 bg-success hover:bg-success/90 text-white shadow-soft pointer-events-none">
-          <Send size={16} /> Finalizar e Submeter MRV
-        </Button>
-      </div>
+      {!locked && (
+        <p className="text-xs text-muted text-center">
+          Arquivos são enviados para revisão do time técnico. Documentos aprovados ficam imutáveis.
+        </p>
+      )}
     </div>
   )
 }

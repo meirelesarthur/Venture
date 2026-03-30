@@ -1,65 +1,124 @@
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Link } from 'react-router-dom'
-import { FileSearch, Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-
 import { useDataStore } from '@/store/data'
+import { Users, Map, CheckCircle2, Clock, MapPin, ArrowRight, Plus } from 'lucide-react'
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    'Auditoria Aprovada': 'bg-success/10 text-success border-success/20',
+    'Em Validação':       'bg-primary/10 text-primary border-primary/20',
+    'Em submissão':       'bg-warning/10 text-warning border-warning/20',
+    'Aberto':             'bg-muted/20 text-muted-foreground border-border/50',
+    'N/A':                'bg-muted/20 text-muted-foreground border-border/50',
+  }
+  return (
+    <Badge variant="outline" className={`shadow-none text-xs ${map[status] ?? 'bg-muted/20 text-muted-foreground'}`}>
+      {status}
+    </Badge>
+  )
+}
 
 export default function AdminClientes() {
-  const clientes = useDataStore((state) => state.clientes)
+  const { clientes, fazendas, talhoes } = useDataStore()
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Gestão de Clientes</h1>
-        <p className="text-muted">Revise os dados reportados na plataforma MRV e acesse os resultados do Motor de Cálculos.</p>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
+          <p className="text-muted">Produtores ativos no programa de carbono.</p>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card className="border-border/50 bg-surface shadow-sm">
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm text-muted">Total Clientes</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent><p className="text-3xl font-bold">{clientes.length}</p></CardContent>
+        </Card>
+        <Card className="border-border/50 bg-surface shadow-sm">
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm text-muted">Total Hectares</CardTitle>
+            <Map className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent><p className="text-3xl font-bold">{clientes.reduce((a,c)=>a+c.area,0).toLocaleString('pt-BR')}</p></CardContent>
+        </Card>
+        <Card className="border-border/50 bg-surface shadow-sm">
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm text-muted">MRV Aprovado</CardTitle>
+            <CheckCircle2 className="h-4 w-4 text-success" />
+          </CardHeader>
+          <CardContent><p className="text-3xl font-bold">{clientes.filter(c=>c.statusMRV==='Auditoria Aprovada').length}</p></CardContent>
+        </Card>
+        <Card className="border-border/50 bg-surface shadow-sm">
+          <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm text-muted">Em Validação</CardTitle>
+            <Clock className="h-4 w-4 text-warning" />
+          </CardHeader>
+          <CardContent><p className="text-3xl font-bold">{clientes.filter(c=>c.statusMRV==='Em Validação').length}</p></CardContent>
+        </Card>
       </div>
 
       <Card className="border-border/50 shadow-sm">
-        <CardHeader className="bg-surface/50 border-b flex-row items-center justify-between pb-4">
-          <CardTitle className="text-lg">Carteira de Clientes</CardTitle>
-          <div className="relative w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 h-9" placeholder="Buscar produtor ou fazenda..." />
-          </div>
+        <CardHeader className="bg-surface/50 border-b pb-4">
+          <CardTitle className="text-lg">Lista de Produtores</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-accent/30">
+            <TableHeader className="bg-accent/5">
               <TableRow>
                 <TableHead>Produtor</TableHead>
-                <TableHead>Área Elegível</TableHead>
-                <TableHead>Progresso MRV</TableHead>
-                <TableHead>Status Motor (RothC)</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
+                <TableHead>Fazenda (Principal)</TableHead>
+                <TableHead>Área Total</TableHead>
+                <TableHead>Talhões</TableHead>
+                <TableHead className="text-center">Status MRV</TableHead>
+                <TableHead className="text-right">Detalhes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clientes.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium text-foreground">{c.nome}</TableCell>
-                  <TableCell>{c.area.toLocaleString('pt-br')} ha</TableCell>
-                  <TableCell>
-                    {c.statusMRV === 'Em Validação' && <Badge variant="secondary" className="bg-warning/10 text-warning">{c.statusMRV}</Badge>}
-                    {c.statusMRV === 'Auditoria Aprovada' && <Badge variant="secondary" className="bg-success/10 text-success">{c.statusMRV}</Badge>}
-                    {c.statusMRV === 'Em submissão' && <Badge variant="outline" className="text-muted-foreground">{c.statusMRV}</Badge>}
-                  </TableCell>
-                  <TableCell>
-                    {c.motor === 'Rodado' ? (
-                      <span className="text-sm font-medium text-success flex items-center gap-1">✔ Concluído</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">{c.motor}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild className="text-primary">
-                      <Link to={`/admin/motor/${c.id}`}><FileSearch size={16} className="mr-2" /> Revisar e Rodar</Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {clientes.map(c => {
+                const fazenda = fazendas.find(f => f.produtorId === c.id)
+                const meusTalhoes = fazenda ? talhoes.filter(t => t.fazendaId === fazenda.id) : []
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-semibold text-foreground">{c.nome}</p>
+                        {c.email && <p className="text-xs text-muted">{c.email}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {fazenda ? (
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <MapPin size={12} className="text-muted" />
+                          <span>{fazenda.nome}</span>
+                          <span className="text-xs text-muted">— {fazenda.municipio}/{fazenda.estado}</span>
+                        </div>
+                      ) : <span className="text-muted text-sm">—</span>}
+                    </TableCell>
+                    <TableCell>{c.area.toLocaleString('pt-BR')} ha</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{meusTalhoes.length}</span>
+                        <span className="text-xs text-success">{meusTalhoes.filter(t => t.tipo === 'projeto').length} proj.</span>
+                        <span className="text-xs text-primary">{meusTalhoes.filter(t => t.tipo === 'control_site').length} ctrl.</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center"><StatusBadge status={c.statusMRV} /></TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="ghost" asChild className="rounded-xl gap-1 h-8">
+                        <Link to={`/admin/clientes/${c.id}`}><ArrowRight size={14} /></Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>
