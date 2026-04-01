@@ -125,11 +125,6 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          {/* Logo */}
-          <div className="flex h-16 items-center border-b px-6">
-            <img src={Logo} alt="Venture Carbon" className="h-10 w-auto object-contain" />
-          </div>
-
           {/* Nav */}
           <nav className="flex-1 space-y-2 p-4">
             {items.map((item) => {
