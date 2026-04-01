@@ -121,12 +121,12 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Sidebar (Admin / Parceiro only) ─────────────────────────── */}
       {role !== 'cliente' && (
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-surface shadow-soft transition-transform duration-300 lg:static lg:translate-x-0 m-4 rounded-3xl ${
+          className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-surface shadow-soft transition-transform duration-300 lg:static lg:translate-x-0 m-4 rounded-3xl overflow-hidden ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
           {/* Nav */}
-          <nav className="flex-1 space-y-2 p-4">
+          <nav className="flex-1 overflow-y-auto space-y-2 p-4">
             {items.map((item) => {
               const isActive = activeItem?.href === item.href
               return (

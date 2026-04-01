@@ -4,16 +4,32 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Mail, Link as LinkIcon, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { useDataStore } from '@/store/data'
 import { toast } from 'sonner'
+import { useState } from 'react'
 
 export default function AdminParceiros() {
-  const parceiros = useDataStore((state) => state.parceiros)
+  const { parceiros, addParceiro } = useDataStore()
+  const [open, setOpen] = useState(false)
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
 
   const copyRefLink = (id: string) => {
     const link = `${window.location.origin}/simulacao?ref=${id}`
     navigator.clipboard.writeText(link)
     toast.success('Link de afiliado copiado!')
+  }
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nome || !email) return
+    addParceiro({ nome, email, leadsGerados: 0, comissaoTotal: 0, hectaresCarteira: 0, status: 'convidado' })
+    toast.success('Parceiro convidado com sucesso!')
+    setOpen(false)
+    setNome('')
+    setEmail('')
   }
 
   return (
@@ -23,9 +39,32 @@ export default function AdminParceiros() {
           <h1 className="text-3xl font-bold text-foreground">Gestão de Parceiros</h1>
           <p className="text-muted-foreground">Convide assessores e exportadores para originar leads e distribua comissões.</p>
         </div>
-        <Button className="gap-2 shrink-0 shadow-soft btn-micro rounded-xl">
-          <Plus size={16} /> Convidar Parceiro
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2 shrink-0 shadow-soft btn-micro rounded-xl">
+              <Plus size={16} /> Convidar Parceiro
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Convidar Novo Parceiro</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleInvite} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome / Empresa</Label>
+                <Input id="nome" value={nome} onChange={e => setNome(e.target.value)} placeholder="AgroConsult Ltda" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail de Contato</Label>
+                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="contato@agro.com" required />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button type="submit">Enviar Convite</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card className="card-minimal mt-6">

@@ -418,6 +418,9 @@ interface DataState {
   alertas: Alerta[]
   usuarios: AppUser[]
 
+  // Parceiros
+  addParceiro: (p: Omit<Parceiro, 'id'>) => void
+
   // Lead
   addLead: (lead: Omit<Lead, 'id' | 'data'>) => string
   updateLeadStatus: (id: string, status: LeadStatus, motivo?: string) => void
@@ -646,6 +649,12 @@ export const useDataStore = create<DataState>()(
           resultadosMotor: state.resultadosMotor.filter(
             (r) => !(r.talhaoId === talhaoId && r.anoAgricola === ano)
           ),
+        })),
+
+      // ── Parceiros ─────────────────────────────────────────────
+      addParceiro: (p) =>
+        set((state) => ({
+          parceiros: [...state.parceiros, { ...p, id: uuidv4() }],
         })),
 
       // ── Clima ─────────────────────────────────────────────────
