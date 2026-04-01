@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
 import {
-  Users, Map, AlertTriangle, CheckCircle2, Clock, ArrowRight,
+  Users, Map, CheckCircle2, Clock, ArrowRight,
   Cpu, Building2, Settings
 } from 'lucide-react'
 
@@ -14,24 +14,6 @@ export default function AdminDashboard() {
   const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
   const mrvPendente = manejo.filter(m => m.status === 'pendente').length
   const mrvCorrecao = manejo.filter(m => m.status === 'correcao').length
-
-  const ALERTAS = [
-    ...(controlSites.filter(s => s.similaridade < 9).length > 0 ? [{
-      tipo: 'danger' as const,
-      texto: `${controlSites.filter(s => s.similaridade < 9).length} Control Site(s) com similaridade abaixo de 9km — revisão necessária.`,
-      link: '/admin/control-sites',
-    }] : []),
-    ...(mrvPendente > 0 ? [{
-      tipo: 'warning' as const,
-      texto: `${mrvPendente} lote(s) MRV aguardando validação na fila.`,
-      link: '/admin/validacao',
-    }] : []),
-    ...(mrvCorrecao > 0 ? [{
-      tipo: 'danger' as const,
-      texto: `${mrvCorrecao} lote(s) MRV com correção solicitada ainda em aberto.`,
-      link: '/admin/validacao',
-    }] : []),
-  ]
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -44,27 +26,6 @@ export default function AdminDashboard() {
           <Link to="/admin/parametros"><Settings size={16} /> Parâmetros globais</Link>
         </Button>
       </div>
-
-      {/* Alertas */}
-      {ALERTAS.length > 0 && (
-        <Card className="border-warning/30 bg-warning/5 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base text-warning flex items-center gap-2">
-              <AlertTriangle size={16} /> Alertas de Plataforma
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {ALERTAS.map((a, i) => (
-              <div key={i} className={`flex items-center justify-between gap-3 p-3 rounded-xl border text-sm ${a.tipo === 'danger' ? 'bg-danger/5 border-danger/20 text-danger' : 'bg-warning/5 border-warning/20 text-warning'}`}>
-                <span>{a.texto}</span>
-                <Button size="sm" variant="ghost" asChild className="h-7 text-xs shrink-0 rounded-lg">
-                  <Link to={a.link}>Revisar <ArrowRight size={12} /></Link>
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
