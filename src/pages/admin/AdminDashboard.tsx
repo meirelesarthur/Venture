@@ -11,6 +11,7 @@ import {
 export default function AdminDashboard() {
   const { leads, clientes, parceiros, controlSites, manejo, fazendas } = useDataStore()
 
+  const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
   const mrvPendente = manejo.filter(m => m.status === 'pendente').length
 
   return (
