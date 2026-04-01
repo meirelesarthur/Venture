@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Mail, Link as LinkIcon, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useDataStore } from '@/store/data'
-import { Toaster, toast } from 'sonner'
+import { toast } from 'sonner'
 
 export default function AdminParceiros() {
   const parceiros = useDataStore((state) => state.parceiros)

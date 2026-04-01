@@ -179,7 +179,7 @@ export function rodarRothC(
     IOM,
   }
 
-  const { fracCO2, fracBioHum } = calcParticoes(argilaPercent)
+  const { fracBioHum } = calcParticoes(argilaPercent)
   const inputC = calcInputC(cultura)
   // Estimar razão DPM/RPM baseado na cultura
   const tipoInput = ['brachiaria','pastagem_brachiaria','pasto'].includes(cultura.cultura)

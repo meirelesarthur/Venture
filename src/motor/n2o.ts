@@ -1,6 +1,6 @@
 // ─── Módulo N2O — QA3 (§5.4 devGuideV2) ──────────────────────────────────────
 
-import { NC_SF, NC_OF, FRAC_GASF, N_CONTENT, HI, RAIZ_PA, FRACAO_C_MS, EF_N2O_MD, EF_N2O_BB, CF_RESIDUOS } from './lookup'
+import { NC_SF, NC_OF, N_CONTENT, FRACAO_C_MS, EF_N2O_MD, EF_N2O_BB, CF_RESIDUOS } from './lookup'
 import { calcInputC } from './rothc'
 import type { DadosCulturaRothC } from './rothc'
 import type { FertilizanteSint, FertilizanteOrg, RegistroPecuaria } from '../store/data'
@@ -30,7 +30,6 @@ function n2oFertDireto(
   fertsInt: FertilizanteSint[],
   fertsOrg: FertilizanteOrg[],
   params: ParamsN2O,
-  areaHa: number,
 ): number {
   let totalNKgHa = 0
 
@@ -160,7 +159,7 @@ export function calcularN2O(
     ef5_n2o_leach: params['ef5_n2o_leach'] ?? 0.011,
   }
 
-  const direto   = n2oFertDireto(fertsInt, fertsOrg, p, areaHa)
+  const direto   = n2oFertDireto(fertsInt, fertsOrg, p)
   const indireto = n2oFertIndireto(fertsInt, fertsOrg, p)
   const esterco  = n2oEsterco(pecuaria, p, areaHa)
   const bnf      = n2oBnf(cultura, p)

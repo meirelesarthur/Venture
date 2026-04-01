@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
-import { CheckCircle2, Clock, XCircle, MessageSquare, UserCheck, ChevronDown } from 'lucide-react'
-import { toast } from 'sonner'
+import { CheckCircle2, Clock, XCircle, UserCheck } from 'lucide-react'
 
 function LeadStatusBadge({ status, motivo }: { status: string; motivo?: string }) {
   const map: Record<string, { label: string; cls: string; Icon: any }> = {
@@ -40,9 +38,6 @@ export default function LeadsPage() {
   ]
 
   const filtered = filter === 'todos' ? leads : leads.filter(l => l.status === filter)
-  const comissaoEstimada = filtered
-    .filter(l => l.status === 'contratado' || l.status === 'aprovado')
-    .reduce((acc, l) => acc + l.area * 1 * 5.65, 0)
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

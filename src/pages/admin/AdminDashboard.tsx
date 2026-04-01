@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
 import {
   Users, Map, AlertTriangle, CheckCircle2, Clock, ArrowRight,
-  TrendingUp, DollarSign, Cpu, Building2, Settings
+  Cpu, Building2, Settings
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -14,9 +14,6 @@ export default function AdminDashboard() {
   const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
   const mrvPendente = manejo.filter(m => m.status === 'pendente').length
   const mrvCorrecao = manejo.filter(m => m.status === 'correcao').length
-  const taxaConversao = leads.length > 0
-    ? Math.round((leads.filter(l => l.status === 'contratado' || l.status === 'efetivado').length / leads.length) * 100)
-    : 0
 
   const ALERTAS = [
     ...(controlSites.filter(s => s.similaridade < 9).length > 0 ? [{

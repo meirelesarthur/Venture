@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDataStore } from '@/store/data'
-import { Plus, Map, ChevronRight, Leaf, MapPin } from 'lucide-react'
+import { Plus, ChevronRight, Leaf, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 
 const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']

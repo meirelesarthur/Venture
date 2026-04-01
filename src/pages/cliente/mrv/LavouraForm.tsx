@@ -5,9 +5,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Leaf, Plus, Save, Trash2 } from 'lucide-react'
+import { Leaf, Save } from 'lucide-react'
 import { useDataStore } from '@/store/data'
-import type { FertilizanteSint, FertilizanteOrg, Calcario } from '@/store/data'
 import { toast } from 'sonner'
 
 const CULTURAS = ['soja','milho','trigo','algodao','arroz','sorgo','cafe','pastagem_braquiaria','pastagem_coloniao','cana','algodao','outro']

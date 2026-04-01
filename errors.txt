@@ -1,0 +1,17 @@
+src/components/maps/KmlUploader.tsx(3,1): error TS6133: 'helpers' is declared but its value is never read.
+src/components/maps/KmlUploader.tsx(3,10): error TS2305: Module '"@turf/helpers"' has no exported member 'helpers'.
+src/motor/co2.ts(15,7): error TS6133: 'totalLitros' is declared but its value is never read.
+src/motor/n2o.ts(3,24): error TS6133: 'FRAC_GASF' is declared but its value is never read.
+src/motor/n2o.ts(3,46): error TS6133: 'HI' is declared but its value is never read.
+src/motor/n2o.ts(3,50): error TS6133: 'RAIZ_PA' is declared but its value is never read.
+src/motor/n2o.ts(33,3): error TS6133: 'areaHa' is declared but its value is never read.
+src/motor/rothc.ts(182,11): error TS6133: 'fracCO2' is declared but its value is never read.
+src/pages/admin/AdminClienteDetalhe.tsx(6,40): error TS6133: 'Clock' is declared but its value is never read.
+src/pages/admin/AdminClientes.tsx(7,63): error TS6133: 'Plus' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(8,3): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(8,15): error TS6133: 'DollarSign' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(17,9): error TS6133: 'taxaConversao' is declared but its value is never read.
+src/pages/admin/AdminFazendas.tsx(10,16): error TS6133: 'Map' is declared but its value is never read.
+src/pages/admin/AdminLeads.tsx(2,1): error TS6133: 'Link' is declared but its value is never read.
+src/pages/admin/AdminLeads.tsx(8,59): error TS6133: 'MessageCircle' is declared but its value is never read.
+src/pages/admin/AdminParceiros.tsx(8,10): error TS6133: 'Toaster' is declared but its value is never read.

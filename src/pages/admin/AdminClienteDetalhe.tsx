@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
-import { ArrowLeft, Map, CheckCircle2, Clock, AlarmClock, Factory, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Map, CheckCircle2, AlarmClock, Factory, ExternalLink } from 'lucide-react'
 import type { MrvStatus } from '@/store/data'
 
 function MrvStatusBadge({ status }: { status: MrvStatus }) {

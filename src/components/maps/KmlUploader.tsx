@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import area from '@turf/area'
-import { helpers } from '@turf/helpers'
 import { Upload, FileCheck, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 

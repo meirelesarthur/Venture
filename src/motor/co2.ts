@@ -12,7 +12,6 @@ export interface ResultadoCO2 {
 // ─── CO2 combustíveis (§5.6.1) ────────────────────────────────────────────────
 
 function co2Combustiveis(operacoes: OperacaoMec[], params: Record<string, number>): number {
-  let totalLitros = 0
   let totalCO2 = 0
   for (const op of operacoes) {
     const efParam = params[`ef_${op.combustivel}`]

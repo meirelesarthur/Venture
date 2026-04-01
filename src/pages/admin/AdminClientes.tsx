@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useDataStore } from '@/store/data'
-import { Users, Map, CheckCircle2, Clock, MapPin, ArrowRight, Plus } from 'lucide-react'
+import { Users, Map, CheckCircle2, Clock, MapPin, ArrowRight } from 'lucide-react'
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
