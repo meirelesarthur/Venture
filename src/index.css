@@ -10,7 +10,7 @@
 
 @theme inline {
   /* Cores Minimalistas Tech */
-  --color-primary: #000000; /* Preto forte para contraste primário (ex: logo, ícones principais) */
+  --color-primary: #057185; /* Azul profundo Venture Carbon para contraste primário (ex: logo, ícones principais) */
   --color-primary-foreground: #FFFFFF;
   --color-background: #F4F5F7; /* Cinza muito claro, como no frame de referência */
   --color-foreground: #111827; /* Preto suave para textos */
