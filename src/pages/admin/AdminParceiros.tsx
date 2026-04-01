@@ -52,8 +52,10 @@ export default function AdminParceiros() {
               {parceiros.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-semibold text-foreground">{p.nome}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm flex items-center gap-2">
-                    <Mail size={14} /> {p.email}
+                  <TableCell className="text-muted-foreground text-sm">
+                    <div className="flex items-center gap-2">
+                      <Mail size={14} /> {p.email}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center font-medium">{p.leadsGerados}</TableCell>
                   <TableCell className="text-right font-medium text-success">

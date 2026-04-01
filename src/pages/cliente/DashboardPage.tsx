@@ -124,6 +124,17 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Mapa da fazenda (2ª linha) */}
+      <Card className="border-border/50 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <FazendaMap
+            talhoes={meusTalhoes}
+            height="360px"
+            onTalhaoClick={(talhaoId) => navigate('/dashboard/mrv', { state: { talhaoId } })}
+          />
+        </CardContent>
+      </Card>
+
       <div className="grid md:grid-cols-3 gap-6">
         {/* Talhões */}
         <Card className="md:col-span-2 border-border/50 shadow-sm bg-surface">
@@ -213,21 +224,6 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
           <p className="text-xs text-muted text-center mt-2">* Projeção estimada. Sujeito a aprovação do Motor de Cálculos (RothC + IPCC).</p>
-        </CardContent>
-      </Card>
-      {/* Mapa da fazenda */}
-      <Card className="border-border/50 shadow-sm overflow-hidden">
-        <CardHeader className="border-b bg-surface/50 pb-4">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MapPin size={16} className="text-primary" /> Visualização dos Talhões
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <FazendaMap
-            talhoes={meusTalhoes}
-            height="360px"
-            onTalhaoClick={(talhaoId) => navigate('/dashboard/mrv', { state: { talhaoId } })}
-          />
         </CardContent>
       </Card>
     </div>

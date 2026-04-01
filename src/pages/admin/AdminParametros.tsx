@@ -134,7 +134,7 @@ export default function AdminParametros() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Parâmetros Globais</h1>

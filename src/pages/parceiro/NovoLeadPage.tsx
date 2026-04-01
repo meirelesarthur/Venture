@@ -59,7 +59,7 @@ export default function NovoLeadPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/parceiro/leads')} className="rounded-full">
           <ArrowLeft size={20} />

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function AdminClientes() {
   const { clientes, fazendas, talhoes } = useDataStore()
+  const navigate = useNavigate()
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -86,7 +87,7 @@ export default function AdminClientes() {
                 const fazenda = fazendas.find(f => f.produtorId === c.id)
                 const meusTalhoes = fazenda ? talhoes.filter(t => t.fazendaId === fazenda.id) : []
                 return (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate(`/admin/clientes/${c.id}`)}>
                     <TableCell>
                       <div>
                         <p className="font-semibold text-foreground">{c.nome}</p>

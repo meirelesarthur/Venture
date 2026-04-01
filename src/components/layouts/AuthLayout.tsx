@@ -1,9 +1,9 @@
-import { type ReactNode, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { type ReactNode, useState, useMemo } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import NotificacoesBell from '@/components/ui/NotificacoesBell'
+import AdminAlertsBell from '@/components/ui/AdminAlertsBell'
 import {
   LayoutDashboard,
   Map,
@@ -89,10 +89,26 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const role = user?.role ?? 'cliente'
   const items = navByRole[role] ?? []
   const currentProfile = DEV_PROFILES.find((p) => p.role === role)
+
+  const activeItem = useMemo(() => {
+    return items.reduce((best, item) => {
+      const isMatch =
+        location.pathname === item.href ||
+        location.pathname.startsWith(item.href + '/')
+      
+      if (isMatch) {
+        if (!best || item.href.length > best.href.length) {
+          return item
+        }
+      }
+      return best
+    }, null as NavItem | null)
+  }, [items, location.pathname])
 
   const switchProfile = (profile: (typeof DEV_PROFILES)[0]) => {
     setUser({ id: profile.id, name: profile.name, email: profile.email, role: profile.role })
@@ -117,9 +133,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           {/* Nav */}
           <nav className="flex-1 space-y-2 p-4">
             {items.map((item) => {
-              const isActive =
-                window.location.pathname === item.href ||
-                (item.href !== '/dashboard' && window.location.pathname.startsWith(item.href))
+              const isActive = activeItem?.href === item.href
               return (
                 <Link
                   key={item.href}
@@ -134,8 +148,6 @@ export function AuthLayout({ children }: { children: ReactNode }) {
               )
             })}
           </nav>
-
-          <Separator />
 
           {/* User info + Logout */}
           <div className="p-4">
@@ -172,7 +184,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       {/* ── Main area ───────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 bg-surface pr-4 sm:pr-8 shadow-md border-x border-b border-border/40 mx-4 sm:mx-8 lg:mx-10 rounded-b-3xl transition-all duration-300">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 bg-surface pl-6 pr-4 sm:pr-8 shadow-md border-x border-b border-border/40 mx-4 sm:mx-8 lg:mx-10 rounded-b-3xl transition-all duration-300">
           <div className="flex items-center gap-4">
             {role !== 'cliente' && (
               <Button
@@ -193,9 +205,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           {role === 'cliente' && (
             <nav className="hidden md:flex flex-1 items-center justify-center gap-2 mx-4">
               {items.map((item) => {
-                const isActive =
-                  window.location.pathname === item.href ||
-                  (item.href !== '/dashboard' && window.location.pathname.startsWith(item.href))
+                const isActive = activeItem?.href === item.href
                 return (
                   <Link
                     key={item.href}
@@ -215,7 +225,8 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
           {/* Right: Notificações + DEV switcher + avatar */}
           <div className="flex items-center gap-3">
-            {/* Notificações */}
+            {/* Notificações e Alertas */}
+            {role === 'admin' && <AdminAlertsBell />}
             <NotificacoesBell />
             {/* DEV profile switcher */}
             <div className="relative">

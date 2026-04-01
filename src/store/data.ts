@@ -217,6 +217,24 @@ export interface Notificacao {
   criadaEm: string
 }
 
+export interface Alerta {
+  id: string
+  texto: string
+  link?: string
+  resolvido: boolean
+  criadoEm: string
+}
+
+export type UserRole = 'Super Admin' | 'Admin' | 'Editor' | 'Visualizador'
+
+export interface AppUser {
+  id: string
+  nome: string
+  email: string
+  role: UserRole
+  status: 'Ativo' | 'Bloqueado'
+}
+
 // ─── Parâmetros iniciais (todos os 18 + fatores SOC) ─────────────────────────
 
 const initialParametros: ParametroSistema[] = [
@@ -346,6 +364,12 @@ const initialParceiros: Parceiro[] = [
   { id: 'p3', nome: 'TechFarm Solutions', email: 'hello@techfarm.ag', leadsGerados: 0, comissaoTotal: 0, hectaresCarteira: 0, status: 'convidado' },
 ]
 
+const initialUsuarios: AppUser[] = [
+  { id: 'u1', nome: 'Admin Principal', email: 'admin@venturecarbon.com', role: 'Super Admin', status: 'Ativo' },
+  { id: 'u2', nome: 'Auditor Externo', email: 'auditor@certificadora.com', role: 'Visualizador', status: 'Ativo' },
+  { id: 'u3', nome: 'João G. (Operações)', email: 'operacoes@venturecarbon.com', role: 'Editor', status: 'Bloqueado' },
+]
+
 // Clima padrão Cerrado Úmido (ref. INMET/Sorriso-MT média 30 anos)
 const PRESET_CERRADO_UMIDO = {
   tempMensal:   [27.2, 27.0, 26.8, 26.5, 25.2, 24.1, 23.8, 25.0, 27.0, 27.5, 27.3, 27.1],
@@ -391,6 +415,8 @@ interface DataState {
   resultadosMotor: ResultadoMotor[]
   dadosClimaticos: DadoClimatico[]
   notificacoes: Notificacao[]
+  alertas: Alerta[]
+  usuarios: AppUser[]
 
   // Lead
   addLead: (lead: Omit<Lead, 'id' | 'data'>) => string
@@ -430,6 +456,14 @@ interface DataState {
   marcarLida: (id: string) => void
   marcarTodasLidas: (para: Notificacao['para']) => void
 
+  // Alertas
+  addAlerta: (a: Omit<Alerta, 'id' | 'criadoEm' | 'resolvido'>) => void
+  resolverAlerta: (id: string) => void
+
+  // Usuários
+  addUsuario: (u: Omit<AppUser, 'id'>) => void
+  updateUsuario: (id: string, changes: Partial<AppUser>) => void
+
   // Util
   resetToInitialData: () => void
 }
@@ -451,6 +485,11 @@ export const useDataStore = create<DataState>()(
       resultadosMotor: initialResultados,
       dadosClimaticos: initialClimaticos,
       notificacoes: [],
+      alertas: [
+        { id: 'al1', texto: 'Falha no sync do motor (Processo X).', resolvido: false, criadoEm: new Date().toISOString() },
+        { id: 'al2', texto: 'Site de controle SC-03 perdeu similaridade >10%.', resolvido: false, criadoEm: new Date().toISOString() }
+      ],
+      usuarios: initialUsuarios,
 
       // ── Lead ──────────────────────────────────────────────────
       addLead: (leadData) => {
@@ -642,6 +681,31 @@ export const useDataStore = create<DataState>()(
           ),
         })),
 
+      // ── Alertas ───────────────────────────────────────────────
+      addAlerta: (a) =>
+        set((state) => ({
+          alertas: [
+            { ...a, id: uuidv4(), criadoEm: new Date().toISOString(), resolvido: false },
+            ...state.alertas,
+          ],
+        })),
+
+      resolverAlerta: (id) =>
+        set((state) => ({
+          alertas: state.alertas.map((a) => a.id === id ? { ...a, resolvido: true } : a),
+        })),
+
+      // ── Usuários ──────────────────────────────────────────────
+      addUsuario: (u) =>
+        set((state) => ({
+          usuarios: [...state.usuarios, { ...u, id: uuidv4() }],
+        })),
+
+      updateUsuario: (id, changes) =>
+        set((state) => ({
+          usuarios: state.usuarios.map((u) => u.id === id ? { ...u, ...changes } : u),
+        })),
+
       // ── Util ──────────────────────────────────────────────────
       resetToInitialData: () =>
         set({
@@ -650,6 +714,11 @@ export const useDataStore = create<DataState>()(
           controlSites: initialSites, parceiros: initialParceiros,
           parametros: initialParametros, resultadosMotor: initialResultados,
           dadosClimaticos: initialClimaticos, notificacoes: [],
+          alertas: [
+            { id: 'al1', texto: 'Falha no sync do motor (Processo X).', resolvido: false, criadoEm: new Date().toISOString() },
+            { id: 'al2', texto: 'Site de controle SC-03 perdeu similaridade >10%.', resolvido: false, criadoEm: new Date().toISOString() }
+          ],
+          usuarios: initialUsuarios,
         }),
     }),
     { name: 'venture-carbon-data' }
