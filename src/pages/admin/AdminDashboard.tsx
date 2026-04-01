@@ -11,9 +11,7 @@ import {
 export default function AdminDashboard() {
   const { leads, clientes, parceiros, controlSites, manejo, fazendas } = useDataStore()
 
-  const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
   const mrvPendente = manejo.filter(m => m.status === 'pendente').length
-  const mrvCorrecao = manejo.filter(m => m.status === 'correcao').length
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
