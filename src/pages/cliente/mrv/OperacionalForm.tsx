@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tractor, Plus, Save, Trash2, Info } from 'lucide-react'
+import { Tractor, Plus, Save, Trash2, Info, Paperclip, X } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import type { OperacaoMec } from '@/store/data'
 import { toast } from 'sonner'
@@ -19,17 +19,29 @@ const LABEL_COMB: Record<string,string> = { diesel: 'Diesel B', gasolina: 'Gasol
 // EF CO2 por litro (kgCO2/L)
 const EF_COMB: Record<string,number> = { diesel: 2.63, gasolina: 2.27, etanol: 0, eletricidade: 0 }
 
-interface Props { talhaoId: string; anoAgricola: number; locked: boolean; manejoId?: string }
+interface Props { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean; manejoId?: string }
 
-export default function OperacionalForm({ talhaoId, anoAgricola, locked, manejoId }: Props) {
+export default function OperacionalForm({ talhaoId, fazendaId, anoAgricola, locked, manejoId }: Props) {
   const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
   const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
   const [ops, setOps] = useState<OperacaoMec[]>(existente?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
+  const [opFiles, setOpFiles] = useState<Record<number, string>>({})
+
+  const handleFileUpload = (idx: number) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.pdf,.jpg,.jpeg,.png'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) setOpFiles(prev => ({ ...prev, [idx]: file.name }))
+    }
+    input.click()
+  }
 
   useEffect(() => {
-    const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    const m = manejo.find(x => (fazendaId ? x.fazendaId === fazendaId : x.talhaoId === talhaoId) && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
     setOps(m?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
-  }, [talhaoId, anoAgricola])
+  }, [talhaoId, fazendaId, anoAgricola])
 
   const update = (i: number, f: keyof OperacaoMec, v: any) =>
     setOps(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
@@ -38,7 +50,7 @@ export default function OperacionalForm({ talhaoId, anoAgricola, locked, manejoI
 
   const handleSave = () => {
     const payload = {
-      talhaoId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const, operacoes: ops,
+      talhaoId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const, operacoes: ops,
     }
     if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
     toast.success('Dados operacionais salvos!')
@@ -102,9 +114,20 @@ export default function OperacionalForm({ talhaoId, anoAgricola, locked, manejoI
                   </td>
                   {!locked && (
                     <td className="p-2">
-                      <button onClick={() => setOps(prev => prev.filter((_,idx)=>idx!==i))} className="text-muted hover:text-danger">
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => handleFileUpload(i)} className="text-muted hover:text-primary" title="Anexar comprovante">
+                          <Paperclip size={12} />
+                        </button>
+                        <button onClick={() => setOps(prev => prev.filter((_,idx)=>idx!==i))} className="text-muted hover:text-danger">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                      {opFiles[i] && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="upload-badge"><Paperclip size={8} /> {opFiles[i]}</span>
+                          <button className="text-muted hover:text-danger" onClick={() => setOpFiles(prev => { const n = {...prev}; delete n[i]; return n })}><X size={8} /></button>
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>

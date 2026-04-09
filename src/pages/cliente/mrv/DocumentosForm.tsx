@@ -19,7 +19,7 @@ const MOCK_DOCS: Doc[] = [
   { name: 'fotos_talhao_a1.zip', type: 'fotos', size: '18.5 MB', status: 'enviado', url: '#' },
 ]
 
-export default function DocumentosForm({ locked }: { talhaoId?: string; anoAgricola?: number; locked: boolean }) {
+export default function DocumentosForm({ locked }: { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS)
   const [uploading, setUploading] = useState<string | null>(null)
 

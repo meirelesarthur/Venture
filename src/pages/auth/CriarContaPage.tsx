@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -23,6 +23,7 @@ type RegisterForm = z.infer<typeof registerSchema>
 
 export default function CriarContaPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setUser = useAuthStore((state) => state.setUser)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -45,7 +46,12 @@ export default function CriarContaPage() {
         role: 'cliente',
       })
       setIsLoading(false)
-      navigate('/dashboard')
+      const origin = new URLSearchParams(location.search).get('origem')
+      if (origin === 'simulador') {
+        navigate('/dashboard/mrv')
+      } else {
+        navigate('/dashboard')
+      }
     }, 1000)
   }
 

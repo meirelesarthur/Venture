@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useFormContext } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { SimuladorData } from '../schema'
-import { ArrowRight, ArrowLeft, UploadCloud, Map as MapIcon, Edit3, CheckCircle2, FileX } from 'lucide-react'
-import L from 'leaflet'
+import { ArrowRight, ArrowLeft, UploadCloud, CheckCircle2, FileX, Map as MapIcon } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
-import 'leaflet-draw/dist/leaflet.draw.css'
-import 'leaflet-draw'
 import area from '@turf/area'
 import { cn } from '@/lib/utils'
+import { MapDemarcationOverlay } from '@/components/MapDemarcationOverlay'
 
 /**
  * Parseia KML e extrai coordenadas de Polygon/LineString/Point
@@ -50,69 +48,31 @@ function kmlToGeoJson(kmlText: string): { geojson: any; hectares: number } | nul
   }
 }
 
-export function Step2Area({ onNext, onPrev }: { onNext: () => void; onPrev: () => void }) {
+export function Step2Area({ onNext, onPrev, onMapEditToggle }: { onNext: () => void; onPrev: () => void; onMapEditToggle?: (active: boolean) => void }) {
   const methods = useFormContext<SimuladorData>()
-  const { register, formState: { errors } } = methods
-  const mapRef = useRef<HTMLDivElement>(null)
-  const [mapInstance, setMapInstance] = useState<L.Map | null>(null)
-  const drawnLayersRef = useRef<L.FeatureGroup | null>(null)
-  const [mode, setMode] = useState<'manual' | 'map'>('manual')
+  const { register, formState: { errors }, watch } = methods
   const [kmlStatus, setKmlStatus] = useState<'idle' | 'ok' | 'error'>('idle')
-  const [kmlFileName, setKmlFileName] = useState('')
+  const [isDrawing, setIsDrawing] = useState(false)
 
-  useEffect(() => {
-    if (mode === 'map' && mapRef.current && !mapInstance) {
-      const map = L.map(mapRef.current).setView([-12.9714, -50.9297], 5)
+  // Get current location coords for initial map position
+  const estado = watch('localizacao.estado')
+  const municipio = watch('localizacao.municipio')
 
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri'
-      }).addTo(map)
+  // Toggle map drawing mode
+  const handleMapToggle = (active: boolean) => {
+    setIsDrawing(active)
+    if (onMapEditToggle) onMapEditToggle(active)
+  }
 
-      const drawnItems = new L.FeatureGroup()
-      map.addLayer(drawnItems)
-      drawnLayersRef.current = drawnItems
-
-      const drawControl = new L.Control.Draw({
-        draw: {
-          polyline: false, circle: false, circlemarker: false, marker: false,
-          polygon: { allowIntersection: false, shapeOptions: { color: '#057A8F' } },
-          rectangle: { shapeOptions: { color: '#057A8F' } }
-        },
-        edit: { featureGroup: drawnItems, remove: true }
-      })
-      map.addControl(drawControl)
-
-      const updateArea = () => {
-        let totalHa = 0
-        drawnItems.eachLayer((layer: any) => {
-          if (layer.toGeoJSON) totalHa += area(layer.toGeoJSON()) / 10000
-        })
-        methods.setValue('area.hectares', parseFloat(totalHa.toFixed(2)), { shouldValidate: true })
-      }
-
-      map.on(L.Draw.Event.CREATED, (e: any) => {
-        drawnItems.addLayer(e.layer)
-        updateArea()
-      })
-      map.on(L.Draw.Event.EDITED, updateArea)
-      map.on(L.Draw.Event.DELETED, updateArea)
-
-      setMapInstance(map)
-    }
-
-    return () => {
-      if (mode === 'manual' && mapInstance) {
-        mapInstance.remove()
-        setMapInstance(null)
-        drawnLayersRef.current = null
-      }
-    }
-  }, [mode, mapInstance, methods])
+  const handleCompleteDrawing = (_points: [number, number][], hectares: number) => {
+    methods.setValue('area.hectares', hectares, { shouldValidate: true })
+    setKmlStatus('ok')
+    handleMapToggle(false)
+  }
 
   const handleKmlUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setKmlFileName(file.name)
     const reader = new FileReader()
     reader.onload = (ev) => {
       const text = ev.target?.result as string
@@ -123,115 +83,73 @@ export function Step2Area({ onNext, onPrev }: { onNext: () => void; onPrev: () =
       }
       setKmlStatus('ok')
       methods.setValue('area.hectares', parseFloat(result.hectares.toFixed(2)), { shouldValidate: true })
-
-      // Renderizar no mapa se modo mapa ativo
-      if (mapInstance && drawnLayersRef.current) {
-        drawnLayersRef.current.clearLayers()
-        result.geojson.features.forEach((f: any) => {
-          const layer = L.geoJSON(f, { style: { color: '#16A34A', weight: 2 } })
-          drawnLayersRef.current!.addLayer(layer)
-        })
-        try { mapInstance.fitBounds(drawnLayersRef.current.getBounds(), { padding: [20, 20] }) } catch {}
-      }
     }
     reader.readAsText(file)
     e.target.value = '' // reset input
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <Button
-          type="button"
-          variant={mode === 'manual' ? 'default' : 'outline'}
-          onClick={() => setMode('manual')}
-          className="h-16 flex flex-col gap-1 items-center justify-center transition-all"
-        >
-          <span className={cn("text-base", mode === 'manual' ? 'text-primary-foreground' : 'text-foreground')}>Inserção Manual</span>
-          <span className={cn("text-xs font-normal", mode === 'manual' ? 'text-primary-foreground/80' : 'text-muted')}>Digitar hectares</span>
-        </Button>
-        <Button
-          type="button"
-          variant={mode === 'map' ? 'default' : 'outline'}
-          onClick={() => setMode('map')}
-          className="h-16 flex flex-col gap-1 items-center justify-center transition-all"
-        >
-          <div className="flex items-center gap-2">
-            <MapIcon size={16} />
-            <span className={cn("text-base", mode === 'map' ? 'text-primary-foreground' : 'text-foreground')}>Mapa Interativo</span>
-          </div>
-          <span className={cn("text-xs font-normal", mode === 'map' ? 'text-primary-foreground/80' : 'text-muted')}>KML ou Desenho</span>
-        </Button>
+    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-foreground">Área do Projeto</h2>
+        <p className="text-sm text-muted-foreground mt-1">Informe a área total elegível.</p>
       </div>
 
-      {mode === 'manual' ? (
-        <div className="space-y-5 max-w-sm mx-auto">
-          <div className="p-5 border rounded-xl bg-surface/50 space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="area.hectares" className="text-base font-medium">Área Total (hectares)</Label>
-              <Input id="area.hectares" type="number" step="0.01" className="text-lg py-6" placeholder="Ex: 500"
-                {...register('area.hectares', { valueAsNumber: true })} />
-              {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
-            </div>
-            <p className="text-xs text-muted text-center">Insira apenas a área produtiva elegível.</p>
-          </div>
-
-          {/* Upload KML mesmo em modo manual */}
+      <div className="space-y-6 max-w-sm mx-auto w-full">
+        <div className="p-5 border rounded-xl bg-surface/50 space-y-3">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Ou importe um KML para calcular automaticamente</Label>
+            <Label htmlFor="area.hectares" className="text-base font-medium">Área Total (hectares)</Label>
+            <Input id="area.hectares" type="number" step="0.01" className="text-lg py-6" placeholder="Ex: 500"
+              {...register('area.hectares', { valueAsNumber: true })} />
+            {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
+          </div>
+          <p className="text-xs text-muted text-center">Insira apenas a área produtiva elegível.</p>
+        </div>
+
+        {/* Upload KML */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Ou calcule traçando a área elegível</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" className="h-20 flex-col gap-2 rounded-xl text-border hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-colors" onClick={() => handleMapToggle(true)}>
+              <MapIcon size={20} />
+              <span className="text-xs">Desenhar no Mapa</span>
+            </Button>
+            
             <label className={cn(
-              'flex items-center gap-3 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
-              kmlStatus === 'ok' ? 'border-success/40 bg-success/5' : kmlStatus === 'error' ? 'border-danger/40 bg-danger/5' : 'border-border/60 hover:border-primary/40 hover:bg-primary/5'
+              'flex flex-col items-center justify-center gap-2 h-20 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
+              kmlStatus === 'ok' ? 'border-success/40 bg-success/5 text-success' : kmlStatus === 'error' ? 'border-danger/40 bg-danger/5 text-danger' : 'border-border/60 hover:border-primary/40 hover:bg-primary/5 text-muted'
             )}>
               <input type="file" accept=".kml" className="hidden" onChange={handleKmlUpload} />
               {kmlStatus === 'ok' ? (
-                <><CheckCircle2 size={18} className="text-success flex-shrink-0" /><span className="text-sm text-success font-medium">{kmlFileName} — área calculada!</span></>
+                <><CheckCircle2 size={20} /><span className="text-xs font-medium text-center">Calculado!</span></>
               ) : kmlStatus === 'error' ? (
-                <><FileX size={18} className="text-danger flex-shrink-0" /><span className="text-sm text-danger">Arquivo inválido. Use um KML com polígono.</span></>
+                <><FileX size={20} /><span className="text-xs text-center">Inválido</span></>
               ) : (
-                <><UploadCloud size={18} className="text-muted flex-shrink-0" /><span className="text-sm text-muted">Arraste ou clique para selecionar arquivo .kml</span></>
+                <><UploadCloud size={20} /><span className="text-xs text-center">Arquivo .KML</span></>
               )}
             </label>
           </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2"><Edit3 size={16} /> Desenhe sua área no mapa</h3>
-            <label className="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded-lg border border-border/60 bg-surface hover:bg-accent/5 transition-colors text-sm">
-              <UploadCloud size={15} className="text-primary" />
-              <span className="text-sm font-medium">Importar KML</span>
-              <input type="file" accept=".kml" className="hidden" onChange={handleKmlUpload} />
-            </label>
-          </div>
-          {kmlStatus === 'ok' && (
-            <div className="flex items-center gap-2 text-xs text-success bg-success/10 border border-success/20 rounded-lg px-3 py-2">
-              <CheckCircle2 size={13} /> {kmlFileName} importado e renderizado no mapa.
-            </div>
-          )}
-          {kmlStatus === 'error' && (
-            <div className="flex items-center gap-2 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
-              <FileX size={13} /> Arquivo KML inválido. Verifique se contém polígonos.
-            </div>
-          )}
-          <p className="text-xs text-muted">Use as ferramentas no canto esquerdo para desenhar e editar a área. O cálculo em hectares é automático.</p>
-          <div ref={mapRef} className="w-full h-[420px] rounded-xl border border-border shadow-inner bg-accent/20 overflow-hidden relative z-0" />
-          <div className="max-w-xs ml-auto">
-            <Label htmlFor="area.hectares.map" className="text-xs text-muted mb-1 block">Hectares Calculados</Label>
-            <Input id="area.hectares.map" type="number" step="0.01" {...register('area.hectares', { valueAsNumber: true })} />
-            {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
-          </div>
-        </div>
-      )}
+      </div>
 
-      <div className="flex justify-between pt-4 border-t border-border/50">
-        <Button type="button" variant="ghost" onClick={onPrev} className="gap-2">
-          <ArrowLeft size={16} /> Anterior
+      <div className="flex gap-3 mt-auto pt-6">
+        <Button type="button" variant="outline" onClick={onPrev} className="rounded-xl h-12 w-20">
+          <ArrowLeft size={16} />
         </Button>
-        <Button type="button" onClick={onNext} className="gap-2">
-          Próximo <ArrowRight size={16} />
+        <Button type="button" onClick={onNext} className="rounded-xl h-12 flex-1 font-semibold">
+          Próximo <ArrowRight size={16} className="ml-2" />
         </Button>
       </div>
+
+      {/* Map Drawing Portal Overlay */}
+      <MapDemarcationOverlay
+        isOpen={isDrawing}
+        onClose={() => handleMapToggle(false)}
+        onComplete={handleCompleteDrawing}
+        title="Desenhar no Mapa"
+        description={`Demarque a área da fazenda em ${municipio || 'sua região'} / ${estado || ''}.`}
+      />
     </div>
   )
 }
+

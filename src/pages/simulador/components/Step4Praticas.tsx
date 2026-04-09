@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { SimuladorData } from '../schema'
-import { ArrowRight, ArrowLeft, TrendingUp, Leaf, AlertCircle, Wifi, WifiOff } from 'lucide-react'
+import { ArrowRight, ArrowLeft, TrendingUp, Leaf, Wifi, WifiOff } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 
 // Mapeamento de prática → chave no parametros_sistema
@@ -122,43 +122,44 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
   const fmtN = (n: number, d = 1) => n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d })
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-6">
       {/* Horizonte */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="mb-6 space-y-4">
         <div>
-          <h3 className="text-lg font-medium text-foreground">Práticas Regenerativas</h3>
-          <p className="text-sm text-muted">Selecione quais práticas pretende implementar ou expandir na área.</p>
+          <h3 className="text-xl font-bold text-foreground">Práticas & Resultados</h3>
+          <p className="text-sm text-muted mt-1">Selecione quais práticas pretende implementar ou expandir na área.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Label className="text-sm font-medium whitespace-nowrap">Horizonte:</Label>
+        
+        <div className="bg-surface/50 p-3 rounded-xl border border-border/50">
+          <Label className="text-xs font-semibold mb-2 block">Horizonte de Projeto:</Label>
           <RadioGroup
             value={horizonte}
             onValueChange={v => setValue('horizonte', v as '10'|'20', { shouldValidate: true })}
-            className="flex gap-3"
+            className="flex gap-4"
           >
             <div className="flex items-center space-x-1.5">
               <RadioGroupItem value="10" id="h10" />
-              <Label htmlFor="h10" className="font-normal cursor-pointer">10 anos</Label>
+              <Label htmlFor="h10" className="font-medium text-sm cursor-pointer">10 anos</Label>
             </div>
             <div className="flex items-center space-x-1.5">
               <RadioGroupItem value="20" id="h20" />
-              <Label htmlFor="h20" className="font-normal cursor-pointer">
-                20 anos <span className="text-xs text-success ml-1">(Recomendado)</span>
+              <Label htmlFor="h20" className="font-medium text-sm cursor-pointer">
+                20 anos <span className="text-xs text-primary font-bold ml-1">(Recomendado)</span>
               </Label>
             </div>
           </RadioGroup>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="space-y-6">
         {/* Lista de práticas */}
-        <div className="lg:col-span-3 space-y-2.5">
+        <div className="space-y-2.5">
           {PRATICAS_LIST.map(pratica => {
             const fator = fatores[pratica.id] ?? 0
             return (
               <label
                 key={pratica.id}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all duration-200 ${
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all duration-200 ${
                   praticas.includes(pratica.id)
                     ? 'border-primary bg-primary/5 shadow-sm'
                     : 'border-border/60 hover:bg-secondary/20 hover:border-border'
@@ -167,17 +168,17 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
                 <Checkbox
                   checked={praticas.includes(pratica.id)}
                   onCheckedChange={() => togglePratica(pratica.id)}
-                  className="mt-0.5 flex-shrink-0"
+                  className="mt-1 flex-shrink-0"
                 />
-                <div className="flex-1 space-y-0.5 leading-none min-w-0">
-                  <span className="font-medium text-sm block text-foreground">{pratica.label}</span>
-                  <span className="text-xs text-muted block">{pratica.desc}</span>
+                <div className="flex-1 space-y-0.5 min-w-0">
+                  <span className="font-semibold text-sm block text-foreground leading-tight">{pratica.label}</span>
+                  <span className="text-[11px] text-muted block leading-tight">{pratica.desc}</span>
                 </div>
-                <div className="flex-shrink-0 text-right">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                <div className="flex-shrink-0 text-right mt-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     praticas.includes(pratica.id) ? 'bg-primary/15 text-primary' : 'bg-muted/10 text-muted'
                   }`}>
-                    {fmtN(fator, 1)} tCO₂e/ha
+                    {fmtN(fator, 1)} tCO₂
                   </span>
                 </div>
               </label>
@@ -186,94 +187,63 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
           {errors.praticas && <p className="text-sm text-destructive">{errors.praticas.message}</p>}
         </div>
 
-        {/* Card de resultado em tempo real — fixo à direita */}
-        <div className="lg:col-span-2">
-          <div className="sticky top-4 space-y-3">
-            <Card className={`border-2 transition-colors duration-300 ${calculo ? 'border-success/30 shadow-md' : 'border-border/40'}`}>
-              <div className={`p-5 rounded-xl ${calculo ? 'bg-success/5' : 'bg-muted/5'}`}>
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp size={18} className={calculo ? 'text-success' : 'text-muted'} />
-                  <p className="text-sm font-semibold text-foreground">Estimativa em Tempo Real</p>
-                  {/* Badge PTAX */}
-                  <div className="ml-auto">
-                    {ptaxLoading ? (
-                      <span className="text-xs text-muted animate-pulse">Buscando PTAX...</span>
-                    ) : ptaxEstimado ? (
-                      <Badge className="bg-warning/10 text-warning border-warning/20 shadow-none text-xs flex items-center gap-1">
-                        <WifiOff size={10} /> Câmbio estimado
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-success/10 text-success border-success/20 shadow-none text-xs flex items-center gap-1">
-                        <Wifi size={10} /> PTAX ao vivo
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {!calculo ? (
-                  <div className="text-center py-8 text-muted text-sm">
-                    <Leaf size={32} className="mx-auto mb-3 opacity-30" />
-                    Selecione ao menos uma prática para ver a estimativa
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Receita total — destaque */}
-                    <div className="text-center bg-success/10 rounded-xl p-4 border border-success/20">
-                      <p className="text-xs text-success/80 mb-1 font-medium">Receita Total ({horizonte} anos)</p>
-                      <p className="text-3xl font-bold text-success">{fmt(calculo.receita_total)}</p>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted">Receita anual</span>
-                        <span className="font-semibold text-foreground">{fmt(calculo.receita_anual)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted">Por hectare / ano</span>
-                        <span className="font-semibold text-foreground">{fmt(calculo.receita_ha_ano)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted">tCO₂e estimado / ano</span>
-                        <span className="font-semibold text-primary">{fmtN(calculo.tco2e_ano, 0)} t</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted">Fator combinado</span>
-                        <span className="font-semibold">{fmtN(calculo.fatorCombinado, 2)} tCO₂e/ha</span>
-                      </div>
-                      <div className="flex justify-between text-xs border-t border-border/40 pt-2">
-                        <span className="text-muted">Custo para você</span>
-                        <span className="font-bold text-success">R$ 0,00</span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted text-center">
-                      US$ {preco_base_usd}/VCU · PTAX R$ {fmtN(ptax, 4)} · Buffer {BUFFER_POOL * 100}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Aviso se já prática avançada (elegibilidade) */}
-            {praticas.includes('plantio_direto') && watch('culturas')?.some((c: any) => c.usa_cobertura && c.usa_org) && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-warning/10 border border-warning/20 text-xs text-warning">
-                <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong>Adicionalidade limitada:</strong> Sua fazenda já pratica plantio direto, cobertura e adubação orgânica.
-                  A elegibilidade depende de expansão significativa dessas práticas. Nosso time avaliará o contexto regional.
+        {/* Card de resultado em tempo real */}
+        <div className="space-y-3 pb-6">
+          <Card className={`border-2 transition-colors duration-300 ${calculo ? 'border-success/30 shadow-md' : 'border-border/40'}`}>
+            <div className={`p-5 rounded-xl ${calculo ? 'bg-success/5' : 'bg-muted/5'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp size={18} className={calculo ? 'text-success' : 'text-muted'} />
+                <p className="text-sm font-semibold text-foreground">Estimativa de Ganhos</p>
+                <div className="ml-auto">
+                  {ptaxLoading ? (
+                    <span className="text-[10px] text-muted animate-pulse">Buscando PTAX...</span>
+                  ) : ptaxEstimado ? (
+                    <Badge className="bg-warning/10 text-warning border-warning/20 shadow-none text-[10px] px-1 py-0!"><WifiOff size={8} className="mr-1"/> Estimado</Badge>
+                  ) : (
+                    <Badge className="bg-success/10 text-success border-success/20 shadow-none text-[10px] px-1 py-0!"><Wifi size={8} className="mr-1"/> Cotação hoje</Badge>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+
+              {!calculo ? (
+                <div className="text-center py-6 text-muted text-xs">
+                  <Leaf size={24} className="mx-auto mb-2 opacity-30" />
+                  Selecione práticas acima para projetar
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-center bg-success/10 rounded-xl p-3 border border-success/20">
+                    <p className="text-[10px] text-success/80 mb-0.5 font-bold uppercase tracking-wider">Receita Total Bruta</p>
+                    <p className="text-2xl font-black text-success">{fmt(calculo.receita_total)}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Receita anual</span>
+                      <span className="font-semibold text-foreground">{fmt(calculo.receita_anual)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Por hectare / ano</span>
+                      <span className="font-semibold">{fmt(calculo.receita_ha_ano)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted">Geração Média Estimada</span>
+                      <span className="font-semibold text-primary">{fmtN(calculo.tco2e_ano, 0)} VCUs/ano</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
       </div>
 
-      <div className="flex justify-between pt-4 border-t border-border/50">
-        <Button type="button" variant="ghost" onClick={onPrev} className="gap-2">
-          <ArrowLeft size={16} /> Anterior
+      <div className="flex gap-3 mt-auto pt-4 pb-2 border-t border-border/50 bg-background">
+        <Button type="button" variant="outline" onClick={onPrev} className="rounded-xl h-12 w-20 flex-shrink-0">
+          <ArrowLeft size={16} />
         </Button>
-        <Button type="button" onClick={onNext} className="gap-2" disabled={praticas.length === 0}>
-          Analisar Resultados <ArrowRight size={16} />
+        <Button type="button" onClick={onNext} className="rounded-xl h-12 flex-1 font-semibold" disabled={praticas.length === 0}>
+          Avançar <ArrowRight size={16} className="ml-2" />
         </Button>
       </div>
     </div>

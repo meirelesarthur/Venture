@@ -1,28 +1,46 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { useDataStore } from '@/store/data'
-import { ArrowLeft, Map, CheckCircle2, AlarmClock, Factory, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Map, CheckCircle2, Factory, ExternalLink, MessageCircle } from 'lucide-react'
 import type { MrvStatus } from '@/store/data'
+import { toast } from 'sonner'
 
 function MrvStatusBadge({ status }: { status: MrvStatus }) {
+  if (status === 'rascunho') return null;
   const cfg = {
-    rascunho:  { label: 'Rascunho',      cls: 'bg-muted/20 text-muted-foreground' },
     pendente:  { label: 'Em Validação',  cls: 'bg-warning/10 text-warning' },
     aprovado:  { label: 'Aprovado',      cls: 'bg-success/10 text-success' },
     correcao:  { label: 'Correção',      cls: 'bg-danger/10 text-danger' },
-  }[status]
+  }[status as Exclude<MrvStatus, 'rascunho'>]
   return <Badge variant="outline" className={`shadow-none text-xs ${cfg.cls}`}>{cfg.label}</Badge>
 }
 
 export default function AdminClienteDetalhe() {
   const { id } = useParams()
-  const { clientes, fazendas, talhoes, manejo } = useDataStore()
+  const { clientes, fazendas, talhoes, manejo, approveManejo, requestCorrection } = useDataStore()
+  const [correcaoTexto, setCorrecaoTexto] = useState<Record<string, string>>({})
 
   const cliente = clientes.find(c => c.id === id) ?? clientes[0]
   const fazenda = fazendas.find(f => f.produtorId === cliente?.id)
   const meusTalhoes = fazenda ? talhoes.filter(t => t.fazendaId === fazenda.id) : []
+  const manejoCliente = manejo.filter(m => meusTalhoes.some(t => t.id === m.talhaoId))
+
+  const handleAprovar = (mId: string) => {
+    approveManejo(mId)
+    toast.success('Dados MRV aprovados com sucesso!')
+  }
+
+  const handleCorrecao = (mId: string) => {
+    const t = correcaoTexto[mId]
+    if (!t?.trim()) { toast.error('Informe o motivo da correção.'); return }
+    requestCorrection(mId, t)
+    toast.success('Solicitação de correção enviada.')
+    setCorrecaoTexto(prev => ({ ...prev, [mId]: '' }))
+  }
 
   if (!cliente) return <div className="text-center py-20 text-muted">Cliente não encontrado.</div>
 
@@ -98,11 +116,6 @@ export default function AdminClienteDetalhe() {
                   <div className="flex items-center gap-3">
                     {t.dadosValidados && <CheckCircle2 size={14} className="text-success" />}
                     {ultimoManejo && <MrvStatusBadge status={ultimoManejo.status} />}
-                    {ultimoManejo?.status === 'pendente' && (
-                      <Button size="sm" className="h-7 text-xs rounded-lg" asChild>
-                        <Link to="/admin/validacao">Revisar</Link>
-                      </Button>
-                    )}
                   </div>
                 </div>
               )
@@ -114,41 +127,77 @@ export default function AdminClienteDetalhe() {
         </CardContent>
       </Card>
 
-      {/* Timeline MRV */}
+      {/* Validação MRV Inline — centralizada no cliente */}
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="border-b bg-surface/50 pb-4">
-          <CardTitle className="text-lg flex items-center gap-2"><AlarmClock size={18} className="text-primary" /> Histórico MRV</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2"><CheckCircle2 size={18} className="text-primary" /> Validação MRV</CardTitle>
         </CardHeader>
-        <CardContent className="pt-4">
-          <div className="space-y-3">
-            {manejo
-              .filter(m => meusTalhoes.some(t => t.id === m.talhaoId))
-              .sort((a, b) => b.anoAgricola - a.anoAgricola)
-              .map(m => {
-                const talhao = meusTalhoes.find(t => t.id === m.talhaoId)
-                return (
-                  <div key={m.id} className="flex items-center gap-4 p-3 rounded-xl border border-border/50 bg-surface/30">
+        <CardContent className="pt-4 space-y-3">
+          {manejoCliente.length === 0 && (
+            <p className="text-sm text-muted text-center py-6">Nenhum dado MRV encontrado para este cliente.</p>
+          )}
+          {manejoCliente
+            .sort((a, b) => b.anoAgricola - a.anoAgricola)
+            .map(m => {
+              const talhao = meusTalhoes.find(t => t.id === m.talhaoId)
+              return (
+                <div key={m.id} className={`p-4 rounded-xl border ${m.status === 'pendente' ? 'border-warning/30 bg-warning/5' : m.status === 'correcao' ? 'border-danger/30 bg-danger/5' : 'border-border/50'}`}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <p className="text-sm font-medium">{talhao?.nome} | Safra {m.anoAgricola}/{m.anoAgricola+1}</p>
-                      <p className="text-xs text-muted">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">{talhao?.nome ?? 'Talhão'}</p>
+                        <span className="text-xs text-muted">Safra {m.anoAgricola}/{m.anoAgricola + 1}</span>
+                      </div>
+                      <p className="text-xs text-muted mt-0.5">
                         {m.cultura ? `Cultura: ${m.cultura}` : '—'}
+                        {m.produtividade ? ` | Prod: ${m.produtividade} ${m.unidadeProd ?? ''}` : ''}
                         {m.submetidoEm && ` | Submetido: ${new Date(m.submetidoEm).toLocaleDateString('pt-BR')}`}
-                        {m.aprovadoEm  && ` | Aprovado: ${new Date(m.aprovadoEm).toLocaleDateString('pt-BR')}`}
                       </p>
-                      {m.comentarioCorrecao && (
-                        <p className="text-xs text-danger mt-1">{m.comentarioCorrecao}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MrvStatusBadge status={m.status} />
+                      {m.status === 'pendente' && (
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs rounded-lg bg-success hover:bg-success/90 text-white"
+                          onClick={() => handleAprovar(m.id)}
+                        >
+                          <CheckCircle2 size={12} className="mr-1" /> Aprovar
+                        </Button>
                       )}
                     </div>
-                    <div className="ml-auto flex-shrink-0">
-                      <MrvStatusBadge status={m.status} />
-                    </div>
                   </div>
-                )
-              })}
-            {manejo.filter(m => meusTalhoes.some(t => t.id === m.talhaoId)).length === 0 && (
-              <p className="text-sm text-muted text-center py-6">Nenhum dado MRV registrado.</p>
-            )}
-          </div>
+
+                  {m.comentarioCorrecao && (
+                    <div className="mt-3 p-2.5 bg-danger/5 border border-danger/20 rounded-lg text-xs text-danger">
+                      <strong>Correção enviada:</strong> {m.comentarioCorrecao}
+                    </div>
+                  )}
+
+                  {m.status === 'pendente' && (
+                    <div className="mt-3 space-y-2 pt-3 border-t border-border/50">
+                      <Textarea
+                        placeholder="Descreva o que precisa ser corrigido..."
+                        value={correcaoTexto[m.id] ?? ''}
+                        onChange={e => setCorrecaoTexto(prev => ({ ...prev, [m.id]: e.target.value }))}
+                        rows={2}
+                        className="rounded-xl resize-none text-sm"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-xs rounded-lg gap-1"
+                          onClick={() => handleCorrecao(m.id)}
+                        >
+                          <MessageCircle size={11} /> Solicitar Correção
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
         </CardContent>
       </Card>
 

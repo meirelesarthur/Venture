@@ -139,23 +139,17 @@ export default function RankingPage() {
         </CardContent>
       </Card>
 
-      {/* Legenda de níveis */}
-      <Card className="border-border/50 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Tabela de Níveis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid sm:grid-cols-4 gap-3">
-            {NIVEIS.map(n => (
-              <div key={n.nome} className={`p-3 rounded-xl border ${n.bg} text-center`}>
-                <p className={`font-bold ${n.color}`}>{n.nome}</p>
-                <p className="text-xs text-muted mt-1">{n.min.toLocaleString('pt-BR')} – {n.max.toLocaleString('pt-BR')} ha</p>
-                {n.nome !== 'Bronze' && <p className="text-[10px] uppercase font-bold text-foreground/50 mt-1">+20% BÔNUS</p>}
-              </div>
-            ))}
+      {/* Legenda de níveis — compacta (footer) */}
+      <div className="flex flex-wrap items-center justify-center gap-3 py-3 px-4 bg-surface border border-border/50 rounded-xl">
+        <span className="text-xs font-medium text-muted mr-1">Níveis:</span>
+        {NIVEIS.map(n => (
+          <div key={n.nome} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs ${n.bg}`}>
+            <span className={`font-semibold ${n.color}`}>{n.nome}</span>
+            <span className="text-muted-foreground">{n.min.toLocaleString('pt-BR')}–{n.max.toLocaleString('pt-BR')} ha</span>
+            {n.nome !== 'Bronze' && <span className="text-[9px] font-bold text-foreground/40">+20%</span>}
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     </div>
   )
 }

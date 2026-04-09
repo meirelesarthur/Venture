@@ -29,17 +29,17 @@ const emptyAnimal = (): RegistroPecuaria => ({
   tipoAnimal: '', sistema: 'extensivo', quantidade: 0, pesoMedio: 450, mesesNaArea: 12, dieta: 'pasto_melhorado'
 })
 
-interface Props { talhaoId: string; anoAgricola: number; locked: boolean; manejoId?: string }
+interface Props { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean; manejoId?: string }
 
-export default function PecuariaForm({ talhaoId, anoAgricola, locked, manejoId }: Props) {
+export default function PecuariaForm({ talhaoId, fazendaId, anoAgricola, locked, manejoId }: Props) {
   const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
   const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
   const [registros, setRegistros] = useState<RegistroPecuaria[]>(existente?.pecuaria ?? [emptyAnimal()])
 
   useEffect(() => {
-    const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    const m = manejo.find(x => (fazendaId ? x.fazendaId === fazendaId : x.talhaoId === talhaoId) && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
     setRegistros(m?.pecuaria ?? [emptyAnimal()])
-  }, [talhaoId, anoAgricola])
+  }, [talhaoId, fazendaId, anoAgricola])
 
   const update = (i: number, field: keyof RegistroPecuaria, value: any) => {
     setRegistros(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
@@ -54,7 +54,7 @@ export default function PecuariaForm({ talhaoId, anoAgricola, locked, manejoId }
 
   const handleSave = () => {
     const payload = {
-      talhaoId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
+      talhaoId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
       pecuaria: registros,
     }
     if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }

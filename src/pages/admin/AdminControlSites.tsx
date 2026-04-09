@@ -13,7 +13,7 @@ import { useDataStore } from '@/store/data'
 
 interface SiteFormData {
   nome: string; area: string; biome: string; distanciaKm: string
-  topografia: string; texturaFao: string; fazendaVinculadaId: string
+  topografia: string; texturaFao: string; fazendasVinculadasIds: string[]
 }
 
 const BIOMAS = ['Cerrado','Amazônia','Mata Atlântica','Pampa','Pantanal','Caatinga']
@@ -24,7 +24,7 @@ export default function AdminControlSites() {
   const { controlSites, fazendas, addControlSite } = useDataStore()
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState<SiteFormData>({
-    nome: '', area: '', biome: 'Cerrado', distanciaKm: '', topografia: 'plano', texturaFao: 'argilosa', fazendaVinculadaId: '',
+    nome: '', area: '', biome: 'Cerrado', distanciaKm: '', topografia: 'plano', texturaFao: 'argilosa', fazendasVinculadasIds: [],
   })
 
   const totalValidos  = controlSites.filter(s => s.status === 'Valido').length
@@ -32,7 +32,7 @@ export default function AdminControlSites() {
 
   // Conformidade por fazenda — 3 níveis VM0042 §8.2
   const conformidade = fazendas.map(f => {
-    const sitesVinculados = controlSites.filter(s => s.fazendaVinculadaId === f.id)
+    const sitesVinculados = controlSites.filter(s => (s.fazendasVinculadasIds ?? []).includes(f.id))
     const validos = sitesVinculados.filter(s => s.status === 'Valido').length
     const status = validos >= 10 ? 'ouro' : validos >= 3 ? 'ok' : validos >= 1 ? 'parcial' : 'nenhum'
     return { fazenda: f, sitesVinculados, validos, status }
@@ -59,12 +59,12 @@ export default function AdminControlSites() {
       nome: form.nome, area: areaNum, biome: form.biome,
       distanciaKm: isNaN(distNum) ? undefined : distNum,
       topografia: form.topografia || undefined, texturaFao: form.texturaFao || undefined,
-      fazendaVinculadaId: form.fazendaVinculadaId || undefined,
+      fazendasVinculadasIds: form.fazendasVinculadasIds.length > 0 ? form.fazendasVinculadasIds : undefined,
       status, similaridade: sim, data: new Date().toLocaleDateString('pt-BR'),
     })
     toast.success(`Site "${form.nome}" cadastrado. Similaridade: ${sim}/11 → ${status}`)
     setModalOpen(false)
-    setForm({ nome:'', area:'', biome:'Cerrado', distanciaKm:'', topografia:'plano', texturaFao:'argilosa', fazendaVinculadaId:'' })
+    setForm({ nome:'', area:'', biome:'Cerrado', distanciaKm:'', topografia:'plano', texturaFao:'argilosa', fazendasVinculadasIds:[] })
   }
 
   return (
@@ -140,7 +140,7 @@ export default function AdminControlSites() {
             </TableHeader>
             <TableBody>
               {controlSites.map(c => {
-                const faz = fazendas.find(f => f.id === c.fazendaVinculadaId)
+                const linkedFarms = fazendas.filter(f => (c.fazendasVinculadasIds ?? []).includes(f.id))
                 return (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.nome}</TableCell>
@@ -155,7 +155,17 @@ export default function AdminControlSites() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted text-xs">{faz?.nome ?? '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      {linkedFarms.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {linkedFarms.map(f => (
+                            <span key={f.id} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-medium">{f.nome}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted">Avulso</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {c.status === 'Valido'
                         ? <Badge className="bg-success/10 text-success border-success/20 shadow-none text-xs"><CheckCircle2 className="w-3 h-3 mr-1" /> Válido</Badge>
@@ -209,14 +219,33 @@ export default function AdminControlSites() {
                 <SelectContent>{TEXTURAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label>Vincular Fazenda</Label>
-              <Select value={form.fazendaVinculadaId} onValueChange={v => setForm(f => ({ ...f, fazendaVinculadaId: v }))}>
-                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                <SelectContent>
-                  {fazendas.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="col-span-2 space-y-1">
+              <Label>Vincular a Fazendas (opcional)</Label>
+              <p className="text-xs text-muted mb-2">Selecione uma ou mais fazendas. Deixe vazio para cadastro avulso.</p>
+              <div className="flex flex-wrap gap-2">
+                {fazendas.map(f => {
+                  const selected = form.fazendasVinculadasIds.includes(f.id)
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        fazendasVinculadasIds: selected
+                          ? prev.fazendasVinculadasIds.filter(id => id !== f.id)
+                          : [...prev.fazendasVinculadasIds, f.id]
+                      }))}
+                      className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                        selected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-border/50 text-muted-foreground hover:bg-accent/5'
+                      }`}
+                    >
+                      {f.nome}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
           <p className="text-xs text-muted">A similaridade será calculada automaticamente com base nos critérios preenchidos.</p>

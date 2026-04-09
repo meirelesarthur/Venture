@@ -5,13 +5,32 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, CheckCircle2, Clock, TrendingUp } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import FazendaMap from '@/components/maps/FazendaMap'
 
 const brl = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+
+// Fases do projeto
+const PROJECT_PHASES = [
+  { id: 'baseline',       label: 'Baseline / Coleta de Solo', Icon: Beaker },
+  { id: 'monitoramento',  label: 'Monitoramento do Manejo',   Icon: ClipboardList },
+  { id: 'validacao',      label: 'Validação',                 Icon: FlaskConical },
+  { id: 'emissao',        label: 'Emissão dos Créditos',      Icon: CheckCircle2 },
+  { id: 'venda',          label: 'Venda',                     Icon: BadgeDollarSign },
+]
+
+function getProjectPhase(statusMRV: string): number {
+  switch (statusMRV) {
+    case 'Aberto': return 0
+    case 'Em submissão': return 1
+    case 'Em Validação': return 2
+    case 'Auditoria Aprovada': return 3
+    default: return 0
+  }
+}
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -22,16 +41,12 @@ export default function DashboardPage() {
   const fazenda = fazendas.find(f => f.produtorId === userClient?.id) ?? fazendas[0]
   const meusTalhoes = talhoes.filter(t => t.fazendaId === fazenda?.id)
 
-  // Progresso MRV
-  const mrvProgress = useMemo(() => {
-    const aprovados = manejo.filter(m => m.talhaoId === meusTalhoes[0]?.id && m.status === 'aprovado').length
-    const total = 5
-    const percent = Math.min(100, Math.round((aprovados / total) * 100))
-    return { percent, aprovados, total }
-  }, [manejo, meusTalhoes])
+  // Check for empty state: no farm data or no talhões
+  const isEmpty = !fazenda || meusTalhoes.length === 0
 
   // Alertas dinâmicos
   const alertas = useMemo(() => {
+    if (isEmpty) return []
     const list: { text: string; tipo: 'warning' | 'danger' | 'info' }[] = []
     const talhoeSemSolo = meusTalhoes.find(t => !t.socPercent && t.tipo === 'projeto')
     if (talhoeSemSolo) list.push({ text: `Dados de solo do ${talhoeSemSolo.nome} não cadastrados.`, tipo: 'warning' })
@@ -40,7 +55,7 @@ export default function DashboardPage() {
     const correcao = manejo.find(m => m.status === 'correcao')
     if (correcao) list.push({ text: 'Correção solicitada pelo admin. Acesse o MRV para revisar.', tipo: 'danger' })
     return list
-  }, [meusTalhoes, manejo])
+  }, [meusTalhoes, manejo, isEmpty])
 
   // Dados gráfico de projeção
   const chartData = useMemo(() => {
@@ -64,6 +79,41 @@ export default function DashboardPage() {
   }
   const st = statusLabel[userClient?.statusMRV ?? 'Aberto']
 
+  const currentPhase = getProjectPhase(userClient?.statusMRV ?? 'Aberto')
+
+  // ─── Empty State ────────────────────────────────────────────
+  if (isEmpty) {
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Olá, {user?.name ?? 'Produtor'}</h1>
+          <p className="text-muted">Bem-vindo à plataforma Venture Carbon.</p>
+        </div>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardContent className="py-16 flex flex-col items-center text-center">
+            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+              <ClipboardList size={36} className="text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Configure seu Projeto</h2>
+            <p className="text-muted max-w-md mb-2">
+              Para iniciarmos seu projeto de créditos de carbono, precisamos dos dados da sua propriedade.
+              Preencha as informações abaixo e nossa equipe irá analisar e aprovar o cadastro.
+            </p>
+            <p className="text-xs text-muted-foreground mb-8">
+              Após o preenchimento, você receberá uma notificação assim que o projeto for aprovado.
+            </p>
+            <Button className="gap-2 h-12 px-8 rounded-xl text-base" onClick={() => navigate('/dashboard/perfil')}>
+              <Leaf size={18} />
+              Preencher Dados do Projeto
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ─── Dashboard Normal ────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
@@ -92,31 +142,41 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Progresso MRV */}
+      {/* Nova Barra de Progresso do Projeto (fases) */}
       <Card className="border-border/50 shadow-sm bg-surface">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-semibold text-foreground">Progresso MRV — Safra 2025/26</CardTitle>
-            <span className="text-sm text-muted">{mrvProgress.percent}%</span>
-          </div>
+          <CardTitle className="text-base font-semibold text-foreground">Progresso do Projeto</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="w-full bg-secondary h-2.5 rounded-full overflow-hidden">
-            <div
-              className="bg-primary h-2.5 rounded-full transition-all duration-700"
-              style={{ width: `${mrvProgress.percent}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-5 gap-2 text-center text-xs">
-            {['Lavoura','Pecuária','Fertilização','Operacional','Documentos'].map((step, i) => {
-              const hasDone = mrvProgress.aprovados > i
-              const hasPending = manejo.some(m => m.talhaoId === meusTalhoes[0]?.id && m.status === 'pendente')
+        <CardContent>
+          <div className="flex items-center gap-0">
+            {PROJECT_PHASES.map((phase, i) => {
+              const isDone = i < currentPhase
+              const isCurrent = i === currentPhase
+              const isLast = i === PROJECT_PHASES.length - 1
               return (
-                <div key={step} className="space-y-1">
-                  <div className={`mx-auto h-6 w-6 rounded-full flex items-center justify-center ${hasDone ? 'bg-success text-white' : hasPending ? 'bg-warning/20 text-warning' : 'bg-secondary text-muted-foreground'}`}>
-                    {hasDone ? <CheckCircle2 size={14} /> : hasPending ? <Clock size={12} /> : <span className="text-xs">{i+1}</span>}
+                <div key={phase.id} className="flex items-center flex-1">
+                  <div className="flex flex-col items-center gap-1.5 flex-1">
+                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${
+                      isDone ? 'bg-success text-white shadow-sm' :
+                      isCurrent ? 'bg-primary text-white shadow-sm ring-2 ring-primary/30' :
+                      'bg-secondary text-muted-foreground'
+                    }`}>
+                      <phase.Icon size={18} />
+                    </div>
+                    <p className={`text-[11px] text-center leading-tight max-w-[90px] ${
+                      isDone ? 'text-success font-medium' :
+                      isCurrent ? 'text-primary font-semibold' :
+                      'text-muted-foreground'
+                    }`}>
+                      {phase.label}
+                    </p>
                   </div>
-                  <p className="text-muted-foreground">{step}</p>
+                  {/* Connector line */}
+                  {!isLast && (
+                    <div className={`h-0.5 w-full mx-1 rounded-full mt-[-18px] ${
+                      isDone ? 'bg-success' : 'bg-border'
+                    }`} />
+                  )}
                 </div>
               )
             })}
@@ -124,7 +184,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Mapa da fazenda (2ª linha) */}
+      {/* Mapa da fazenda */}
       <Card className="border-border/50 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           <FazendaMap
@@ -156,9 +216,9 @@ export default function DashboardPage() {
                       <Badge variant="outline" className={`text-xs shadow-none ${tipoColor}`}>
                         {t.tipo === 'projeto' ? 'Projeto' : t.tipo === 'control_site' ? 'Controle' : 'Excluído'}
                       </Badge>
-                      {m && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${m.status === 'aprovado' ? 'bg-success/10 text-success border-success/20' : m.status === 'pendente' ? 'bg-warning/10 text-warning border-warning/20' : m.status === 'correcao' ? 'bg-danger/10 text-danger border-danger/20' : 'bg-muted/10 text-muted border-border/50'}`}>
-                          {m.status === 'aprovado' ? '✓ Aprovado' : m.status === 'pendente' ? '⏳ Revisão' : m.status === 'correcao' ? '⚠ Correção' : 'Rascunho'}
+                      {m && m.status !== 'rascunho' && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${m.status === 'aprovado' ? 'bg-success/10 text-success border-success/20' : m.status === 'pendente' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-danger/10 text-danger border-danger/20'}`}>
+                          {m.status === 'aprovado' ? '✓ Aprovado' : m.status === 'pendente' ? '⏳ Revisão' : '⚠ Correção'}
                         </span>
                       )}
                     </div>

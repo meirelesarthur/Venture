@@ -58,6 +58,7 @@ export interface Talhao {
   // KML / mapa mock (coordenadas aproximadas para visualização)
   latCenter?: number
   lngCenter?: number
+  socTimestamp?: string
 }
 
 export interface FertilizanteSint { tipo: string; qtdKgHa: number; usaInibidor: boolean }
@@ -69,15 +70,31 @@ export interface RegistroPecuaria {
   pesoMedio: number; mesesNaArea: number; dieta: string
 }
 
+export interface CulturaManejo {
+  id: string
+  nome: string
+  dataPlantio?: string
+  dataColheita?: string
+  produtividade?: number
+  unidadeProd?: 'sacas_ha' | 't_ha'
+  hasSafrinha?: boolean
+  safrinhaNome?: string
+  safrinhaDataPlantio?: string
+  safrinhaDataColheita?: string
+  safrinhaProdutividade?: number
+}
+
 export interface DadosManejoAnual {
   id: string
-  talhaoId: string
+  talhaoId?: string
+  fazendaId?: string
   anoAgricola: number
   cenario: 'baseline' | 'projeto'
   status: MrvStatus
   comentarioCorrecao?: string
   // Lavoura
   cultura?: string
+  culturas?: CulturaManejo[]
   dataPlantio?: string
   dataColheita?: string
   produtividade?: number
@@ -135,7 +152,7 @@ export interface ControlSite {
   topografia?: string
   texturaFao?: string
   distanciaKm?: number
-  fazendaVinculadaId?: string
+  fazendasVinculadasIds?: string[]
   talhaoVinculadoIds?: string[]
 }
 
@@ -353,9 +370,9 @@ const initialComissoes: Comissao[] = [
 ]
 
 const initialSites: ControlSite[] = [
-  { id: 's1', nome: 'Site Controle Sul MT-01', area: 54, status: 'Valido', similaridade: 9, biome: 'Cerrado', data: '10/01/2026', topografia: 'suave_ondulado', texturaFao: 'argilo-arenosa', distanciaKm: 12, fazendaVinculadaId: 'f1', talhaoVinculadoIds: ['t1','t2'] },
-  { id: 's2', nome: 'Site Controle Sorriso-02', area: 120, status: 'Valido', similaridade: 11, biome: 'Cerrado', data: '05/02/2026', topografia: 'plano', texturaFao: 'argilosa', distanciaKm: 8, fazendaVinculadaId: 'f1', talhaoVinculadoIds: ['t1'] },
-  { id: 's3', nome: 'Site Controle Cerrado-03', area: 85, status: 'Alerta', similaridade: 7, biome: 'Cerrado', data: '22/03/2026', topografia: 'ondulado', texturaFao: 'franco-argilosa', distanciaKm: 47, fazendaVinculadaId: 'f1', talhaoVinculadoIds: ['t2'] },
+  { id: 's1', nome: 'Site Controle Sul MT-01', area: 54, status: 'Valido', similaridade: 9, biome: 'Cerrado', data: '10/01/2026', topografia: 'suave_ondulado', texturaFao: 'argilo-arenosa', distanciaKm: 12, fazendasVinculadasIds: ['f1'], talhaoVinculadoIds: ['t1','t2'] },
+  { id: 's2', nome: 'Site Controle Sorriso-02', area: 120, status: 'Valido', similaridade: 11, biome: 'Cerrado', data: '05/02/2026', topografia: 'plano', texturaFao: 'argilosa', distanciaKm: 8, fazendasVinculadasIds: ['f1'], talhaoVinculadoIds: ['t1'] },
+  { id: 's3', nome: 'Site Controle Cerrado-03', area: 85, status: 'Alerta', similaridade: 7, biome: 'Cerrado', data: '22/03/2026', topografia: 'ondulado', texturaFao: 'franco-argilosa', distanciaKm: 47, fazendasVinculadasIds: ['f1'], talhaoVinculadoIds: ['t2'] },
 ]
 
 const initialParceiros: Parceiro[] = [
@@ -566,7 +583,7 @@ export const useDataStore = create<DataState>()(
       // ── MRV ──────────────────────────────────────────────────
       saveManejoRascunho: (data) => {
         const existing = get().manejo.find(
-          (m) => m.talhaoId === data.talhaoId && m.anoAgricola === data.anoAgricola && m.cenario === data.cenario
+          (m) => (data.talhaoId ? m.talhaoId === data.talhaoId : m.fazendaId === data.fazendaId) && m.anoAgricola === data.anoAgricola && m.cenario === data.cenario
         )
         if (existing) {
           set((state) => ({

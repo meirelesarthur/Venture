@@ -30,7 +30,7 @@ export default function AdminAlertsBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 z-50 w-80 bg-surface border border-warning/30 rounded-xl shadow-xl overflow-hidden">
+          <div className="absolute left-0 top-10 z-50 w-80 bg-surface border border-warning/30 rounded-xl shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-warning/20 bg-warning/5">
               <p className="text-sm font-semibold text-warning">Alertas de Sistema</p>
             </div>
