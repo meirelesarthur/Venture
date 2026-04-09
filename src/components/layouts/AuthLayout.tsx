@@ -18,6 +18,14 @@ import {
   Shield,
   Cpu,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import Logo from '@/assets/Logo.png'
 
 interface NavItem {
@@ -186,9 +194,30 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 
             <div className="flex items-center gap-3">
               <NotificacoesBell />
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm">
-                {user?.name?.charAt(0) ?? 'U'}
-              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm hover:ring-2 hover:ring-primary/20 transition-all focus:outline-none">
+                    {user?.name?.charAt(0) ?? 'U'}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/dashboard/perfil')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => { logout(); navigate('/login') }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
         ) : (

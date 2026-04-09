@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import FarmImage from '@/assets/farm.jpeg'
 import { FormProvider, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { simuladorSchema, type SimuladorData } from './schema'
@@ -79,7 +80,7 @@ export default function SimuladorPage() {
       {!showMap && (
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000"
-          style={{ backgroundImage: "url('/src/assets/farm.jpeg')", opacity: 0.6 }}
+          style={{ backgroundImage: `url(${FarmImage})`, opacity: 0.6 }}
         />
       )}
       {showMap && (
