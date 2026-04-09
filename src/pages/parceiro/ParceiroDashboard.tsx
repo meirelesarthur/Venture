@@ -174,7 +174,7 @@ export default function ParceiroDashboard() {
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
           <CardTitle className="text-lg">Últimas Indicações</CardTitle>
-          <Button variant="ghost" size="sm" asChild><Link to="/parceiro/leads">Ver todos</Link></Button>
+          <Button variant="ghost" size="sm" className="cursor-default hover:bg-transparent">Ver todos</Button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-border/50">

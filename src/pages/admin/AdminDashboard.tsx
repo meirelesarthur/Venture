@@ -52,7 +52,7 @@ export default function AdminDashboard() {
         <Card className="border-border/50 shadow-sm bg-surface">
           <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
             <CardTitle className="text-lg">Leads para Análise ({leadsNovos})</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="rounded-lg"><Link to="/admin/leads">Ver todos <ArrowRight size={14} /></Link></Button>
+            <Button variant="ghost" size="sm" className="rounded-lg cursor-default hover:bg-transparent">Ver todos <ArrowRight size={14} /></Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/50">
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
         <Card className="border-border/50 shadow-sm bg-surface">
           <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
             <CardTitle className="text-lg">Fila de Validação MRV</CardTitle>
-            <Button variant="ghost" size="sm" asChild className="rounded-lg"><Link to="/admin/validacao">Ver fila <ArrowRight size={14} /></Link></Button>
+            <Button variant="ghost" size="sm" className="rounded-lg cursor-default hover:bg-transparent">Ver fila <ArrowRight size={14} /></Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/50">
