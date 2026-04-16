@@ -759,6 +759,43 @@ const initialResultados: ResultadoMotor[] = [
   },
 ]
 
+const initialHistorico: EventoHistorico[] = [
+  {
+    id: 'h1', fazendaId: 'f1', timestampUtc: '2025-10-15T14:30:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [{ campo: 'areaTotalHa', valorAnterior: 1000, valorNovo: 1200 }],
+    observacao: 'Ajuste de área total baseado no novo georreferenciamento (CAR).'
+  },
+  {
+    id: 'h2', fazendaId: 'f1', timestampUtc: '2026-01-20T09:15:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [{ campo: '[Talhão A1] socPercent', valorAnterior: 1.85, valorNovo: 2.10 }],
+    observacao: 'Resultados da nova coleta de solo inseridos laboratorialmente.'
+  },
+  {
+    id: 'h3', fazendaId: 'f1', timestampUtc: '2026-02-10T11:00:00Z',
+    usuarioId: 'c1', usuarioNome: 'João da Silva', tipoAtor: 'cliente',
+    camposAlterados: [{ campo: '[Talhão A2] nome', valorAnterior: 'Área Leste', valorNovo: 'Talhão A2' }],
+    observacao: 'Padronização de nomenclatura interna.'
+  },
+  {
+    id: 'h4', fazendaId: 'f2', timestampUtc: '2025-11-05T16:45:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [
+      { campo: '[Talhão C1] argilaPercent', valorAnterior: 45, valorNovo: 55 },
+      { campo: '[Talhão C1] bdGCm3', valorAnterior: 1.40, valorNovo: 1.28 }
+    ],
+    observacao: 'Correção dos dados granulométricos solicitada pela auditoria (VVB).'
+  },
+  {
+    id: 'h5', fazendaId: 'f3', timestampUtc: '2025-08-25T10:20:00Z',
+    usuarioId: 'c3', usuarioNome: 'Marcos Antônio', tipoAtor: 'cliente',
+    camposAlterados: [{ campo: 'municipio', valorAnterior: 'Luziânia', valorNovo: 'Cristalina' }],
+    observacao: 'Atualização do município sede da fazenda para registro correto.'
+  }
+]
+
+
 // ─── Store interface ───────────────────────────────────────────────────────────
 
 interface DataState {
@@ -869,7 +906,7 @@ export const useDataStore = create<DataState>()(
       ],
       usuarios: initialUsuarios,
       coletasSolo: [],
-      historicoFazendas: [],
+      historicoFazendas: initialHistorico,
       matchResults: [],
 
       // ── Lead ──────────────────────────────────────────────────
@@ -1189,9 +1226,9 @@ export const useDataStore = create<DataState>()(
           ],
           usuarios: initialUsuarios,
           coletasSolo: [],
-          historicoFazendas: [],
+          historicoFazendas: initialHistorico,
         }),
     }),
-    { name: 'venture-carbon-data', version: 2 }
+    { name: 'venture-carbon-data', version: 3 }
   )
 )
