@@ -32,7 +32,9 @@ const AdminClientes       = lazy(() => import('@/pages/admin/AdminClientes'))
 const AdminClienteDetalhe = lazy(() => import('@/pages/admin/AdminClienteDetalhe'))
 const AdminLeads          = lazy(() => import('@/pages/admin/AdminLeads'))
 const AdminParceiros      = lazy(() => import('@/pages/admin/AdminParceiros'))
-const AdminControlSites   = lazy(() => import('@/pages/admin/AdminControlSites'))
+const AdminControlSites       = lazy(() => import('@/pages/admin/AdminControlSites'))
+const AdminControlSiteDetalhe = lazy(() => import('@/pages/admin/AdminControlSiteDetalhe'))
+const AdminControlSiteForm    = lazy(() => import('@/pages/admin/AdminControlSiteForm'))
 const AdminParametros     = lazy(() => import('@/pages/admin/AdminParametros'))
 const AdminMotor          = lazy(() => import('@/pages/admin/AdminMotor'))
 const AdminUsers          = lazy(() => import('@/pages/admin/AdminUsers'))
@@ -81,7 +83,10 @@ export default function App() {
           <Route path="/admin/clientes/:id"                 element={<A roles={['admin']}><AdminClienteDetalhe /></A>} />
           <Route path="/admin/leads/*"                      element={<A roles={['admin']}><AdminLeads /></A>} />
           <Route path="/admin/parceiros"                    element={<A roles={['admin']}><AdminParceiros /></A>} />
-          <Route path="/admin/control-sites/*"              element={<A roles={['admin']}><AdminControlSites /></A>} />
+          <Route path="/admin/control-sites"                  element={<A roles={['admin']}><AdminControlSites /></A>} />
+          <Route path="/admin/control-sites/novo"             element={<A roles={['admin']}><AdminControlSiteForm /></A>} />
+          <Route path="/admin/control-sites/:id"              element={<A roles={['admin']}><AdminControlSiteDetalhe /></A>} />
+          <Route path="/admin/control-sites/:id/editar"       element={<A roles={['admin']}><AdminControlSiteForm /></A>} />
           <Route path="/admin/parametros"                   element={<A roles={['admin']}><AdminParametros /></A>} />
           <Route path="/admin/usuarios"                     element={<A roles={['admin']}><AdminUsers /></A>} />
           <Route path="/admin/motor/:fazendaId?"            element={<A roles={['admin']}><AdminMotor /></A>} />

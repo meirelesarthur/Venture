@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDataStore } from '@/store/data'
 import type { MrvStatus } from '@/store/data'
 import { toast } from 'sonner'
-import { ArrowLeft, Leaf, Droplets, Tractor, FileText, Settings2, Send, Thermometer, Cpu, Layers, Clock, AlertCircle, Lock } from 'lucide-react'
+import { ArrowLeft, Leaf, Droplets, Tractor, FileText, Settings2, Send, Thermometer, Cpu, Layers, Clock, AlertCircle, Lock, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function StatusBadge({ status }: { status: MrvStatus }) {
@@ -33,6 +33,7 @@ import DocumentosForm from '@/pages/cliente/mrv/DocumentosForm'
 
 import { AdminTalhoesTab } from './components/AdminTalhoesTab'
 import { AdminMotorTab } from './components/AdminMotorTab'
+import { AdminHistoricoTab } from './components/AdminHistoricoTab'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const ANOS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3]
@@ -58,6 +59,7 @@ export default function AdminFazendaDetalhe() {
     { id: 'documentos', name: 'Evidências', Icon: FileText },
     { id: 'talhoes', name: 'Gestor de Talhões (Admin)', Icon: Layers },
     { id: 'motor', name: 'Motor de Cálculos', Icon: Cpu },
+    { id: 'historico', name: 'Histórico', Icon: History },
   ]
 
   const handleSubmit = () => {
@@ -143,6 +145,7 @@ export default function AdminFazendaDetalhe() {
             
             {activeTab === 'talhoes' && <AdminTalhoesTab fazendaId={fazenda.id} />}
             {activeTab === 'motor' && <AdminMotorTab fazendaId={fazenda.id} anoAgricola={anoAgricola} />}
+            {activeTab === 'historico' && <AdminHistoricoTab fazendaId={fazenda.id} />}
           </div>
         </div>
 

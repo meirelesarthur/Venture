@@ -27,11 +27,62 @@ export interface DadosCulturaRothC {
   residuosCampo: boolean
 }
 
+// ─── Intermediários RothC expostos para transparência ────────────────────────
+
+export interface IntermediarioRothC {
+  // §5.3.9 — Inicialização SOC
+  socTotalTcHa: number        // SOC estoque total inicial (tC/ha)
+  // §5.3.7 — IOM
+  iomTcHa: number             // Matéria Orgânica Inerte (tC/ha)
+  socAtivoTcHa: number        // SOC ativo = total − IOM
+  // §5.3.8 — Input de Carbono (Harvest Index)
+  yieldTHa: number            // produtividade convertida em t MS/ha
+  hiUsado: number | null      // Harvest Index da cultura
+  raizPaUsado: number         // Razão raiz/parte aérea
+  bioAereaTHa: number         // biomassa aérea não colhida (t MS/ha)
+  bioRaizTHa: number          // biomassa de raízes (t MS/ha)
+  inputCTcHaAno: number       // input de C total (tC/ha/ano)
+  fracaoC_MS: number          // constante IPCC 0.45
+  // §5.3.6 — Razão DPM/RPM
+  tipoInput: string           // 'agricola' | 'pastagem_nao_melhora' | 'floresta'
+  dpmRpmRatio: number         // DPM/RPM numérico
+  fracDPM: number
+  fracRPM: number
+  // §5.3.5 — Particionamento CO2 vs BIO+HUM
+  argilaPercent: number
+  xParticionamento: number    // valor de x na equação
+  fracCO2: number
+  fracBioHum: number
+  // §5.3.2 — Fator A (temperatura, mês 1 como referência)
+  fatorA_mes1: number
+  tempC_mes1: number
+  // §5.3.3 — Fator B (umidade, mês 1 como referência)
+  fatorB_mes1: number
+  maxTSMD: number
+  // §5.3.4 — Fator C
+  fatorC_mes1: number         // cobertura no mês 1 (0.6 = vegetado, 1.0 = exposto)
+  // §5.3.1 — Decomposição mensal (constantes k por compartimento)
+  k_DPM: number
+  k_RPM: number
+  k_BIO: number
+  k_HUM: number
+  // Compartimentos finais
+  compartimentosFinalDPM: number
+  compartimentosFinalRPM: number
+  compartimentosFinalBIO: number
+  compartimentosFinalHUM: number
+  compartimentosFinalIOM: number
+  // Conversão final
+  deltaSocTcHa: number
+  co2Tco2eHaCalc: number      // delta_SOC × (44/12)
+}
+
 export interface ResultadoRothC {
   socPorAno: number[]         // tC/ha por ano rodado
   deltaSocTcHa: number        // variação final de SOC (tC/ha)
   co2Tco2eHa: number          // delta_SOC convertido em tCO2e/ha
   compartimentosFinal: { DPM: number; RPM: number; BIO: number; HUM: number; IOM: number }
+  intermediarios: IntermediarioRothC
 }
 
 // ─── Fator A — temperatura (§5.3.2) ─────────────────────────────────────────
@@ -48,7 +99,7 @@ export function calcFatorB(
   pctArgila: number,
   profCm: number,
   accTSMD: number,    // acumulado TSMD do mês anterior
-): { b: number; novAccTSMD: number } {
+): { b: number; novAccTSMD: number; maxTSMD: number } {
   // Max TSMD para 23cm
   const maxTSMD_23 = -(20.0 + 1.3 * pctArgila - 0.01 * pctArgila ** 2)
   // Ajuste para profundidade real
@@ -69,7 +120,7 @@ export function calcFatorB(
     b = 0.2 + 0.8 * (maxTSMD - newAcc) / (maxTSMD - threshold)
   }
 
-  return { b: Math.max(0, Math.min(b, 1)), novAccTSMD: newAcc }
+  return { b: Math.max(0, Math.min(b, 1)), novAccTSMD: newAcc, maxTSMD }
 }
 
 // ─── Fator C — cobertura vegetal (§5.3.4) ────────────────────────────────────
@@ -122,7 +173,6 @@ export function calcInputC(dados: DadosCulturaRothC): number {
     inputC = (bioAereaEfetiva + bioRaiz) * FRACAO_C_MS
   } else {
     // Pastagem / cobertura sem HI definido
-    // Biomassa aérea estimada por produtividade de pastagem (t MS/ha típico)
     const bioAerea = 2.5  // 2.5 t MS/ha média pastagem brachiaria
     const bioRaiz  = bioAerea * raizPa
     inputC = (bioAerea + bioRaiz) * FRACAO_C_MS
@@ -131,13 +181,56 @@ export function calcInputC(dados: DadosCulturaRothC): number {
   return Math.max(inputC, 0.1)  // mínimo 0.1 tC/ha/ano
 }
 
+// Versão detalhada que também retorna os intermediários
+function calcInputCDetalhado(dados: DadosCulturaRothC): {
+  inputC: number
+  yieldTHa: number
+  hiUsado: number | null
+  raizPaUsado: number
+  bioAereaTHa: number
+  bioRaizTHa: number
+} {
+  const { cultura, produtividade, unidadeProd, residuosCampo } = dados
+  if (!produtividade) {
+    return { inputC: 0.3, yieldTHa: 0, hiUsado: null, raizPaUsado: 0, bioAereaTHa: 0, bioRaizTHa: 0 }
+  }
+
+  const hi = HI[cultura] ?? HI['outras']!
+  const raizPa = RAIZ_PA[cultura] ?? RAIZ_PA['outras']
+  const yieldTHa = unidadeProd === 'sacas_ha' ? produtividade * 0.06 : produtividade
+
+  let inputC = 0
+  let bioAerea = 0
+  let bioRaiz = 0
+
+  if (hi !== null) {
+    bioAerea = (yieldTHa / hi) - yieldTHa
+    bioRaiz  = bioAerea * raizPa
+    const bioAereaEfetiva = residuosCampo ? bioAerea : 0
+    inputC = (bioAereaEfetiva + bioRaiz) * FRACAO_C_MS
+  } else {
+    bioAerea = 2.5
+    bioRaiz  = bioAerea * raizPa
+    inputC = (bioAerea + bioRaiz) * FRACAO_C_MS
+  }
+
+  return {
+    inputC: Math.max(inputC, 0.1),
+    yieldTHa,
+    hiUsado: hi,
+    raizPaUsado: raizPa,
+    bioAereaTHa: bioAerea,
+    bioRaizTHa: bioRaiz,
+  }
+}
+
 // ─── Particionamento CO2 vs BIO+HUM (§5.3.5) ─────────────────────────────────
 
-export function calcParticoes(pctArgila: number): { fracCO2: number; fracBioHum: number } {
+export function calcParticoes(pctArgila: number): { fracCO2: number; fracBioHum: number; x: number } {
   const x = 1.67 * (1.85 + 1.60 * Math.exp(-0.0786 * pctArgila))
   const fracCO2    = x / (x + 1)
   const fracBioHum = 1 / (x + 1)
-  return { fracCO2, fracBioHum }
+  return { fracCO2, fracBioHum, x }
 }
 
 // ─── Decomposição mensal de um compartimento (§5.3.1) ────────────────────────
@@ -165,8 +258,9 @@ export function rodarRothC(
 ): ResultadoRothC {
   const { socPercent, bdGCm3, argilaPercent, profundidadeCm } = talhao
 
-  // Estoque inicial total SOC (tC/ha)
+  // §5.3.9 — Estoque inicial total SOC (tC/ha)
   const socTotal = calcSOCstock(socPercent, bdGCm3, profundidadeCm)
+  // §5.3.7 — IOM
   const IOM = calcIOM(socTotal)
   const socAtivo = socTotal - IOM   // SOC ativo inicial
 
@@ -179,9 +273,14 @@ export function rodarRothC(
     IOM,
   }
 
-  const { fracBioHum } = calcParticoes(argilaPercent)
-  const inputC = calcInputC(cultura)
-  // Estimar razão DPM/RPM baseado na cultura
+  // §5.3.5 — Particionamento
+  const { fracBioHum, fracCO2, x: xParticionamento } = calcParticoes(argilaPercent)
+
+  // §5.3.8 — Input de carbono detalhado
+  const inputDetalhado = calcInputCDetalhado(cultura)
+  const inputC = inputDetalhado.inputC
+
+  // §5.3.6 — Razão DPM/RPM
   const tipoInput = ['brachiaria','pastagem_brachiaria','pasto'].includes(cultura.cultura)
     ? 'pastagem_nao_melhora'
     : 'agricola'
@@ -189,6 +288,16 @@ export function rodarRothC(
   const totalRatioPC = dpmRpm.dpm + dpmRpm.rpm
   const fracDPM = dpmRpm.dpm / totalRatioPC
   const fracRPM = dpmRpm.rpm / totalRatioPC
+
+  // §5.3.2 — Fator A (mês 1, referência)
+  const cl0 = clima[0]
+  const fatorA_mes1 = calcFatorA(cl0.tempC)
+
+  // §5.3.3 — Fator B (mês 1, referência)
+  const fatorBResult_mes1 = calcFatorB(cl0.precipMm, cl0.evapMm, argilaPercent, profundidadeCm, 0)
+
+  // §5.3.4 — Fator C (mês 1, referência)
+  const fatorC_mes1 = calcFatorC(0, cultura.dataPlantio, cultura.dataColheita)
 
   const socPorAno: number[] = []
   let accTSMD = 0
@@ -230,10 +339,58 @@ export function rodarRothC(
   const deltaSocTcHa  = socFinalCalc - socInicial
   const co2Tco2eHa    = deltaSocTcHa * (44 / 12)
 
+  const intermediarios: IntermediarioRothC = {
+    // §5.3.9 Inicialização
+    socTotalTcHa: socTotal,
+    iomTcHa: IOM,
+    socAtivoTcHa: socAtivo,
+    // §5.3.8 Harvest Index
+    yieldTHa: inputDetalhado.yieldTHa,
+    hiUsado: inputDetalhado.hiUsado,
+    raizPaUsado: inputDetalhado.raizPaUsado,
+    bioAereaTHa: inputDetalhado.bioAereaTHa,
+    bioRaizTHa: inputDetalhado.bioRaizTHa,
+    inputCTcHaAno: inputC,
+    fracaoC_MS: FRACAO_C_MS,
+    // §5.3.6 DPM/RPM
+    tipoInput,
+    dpmRpmRatio: dpmRpm.dpm / dpmRpm.rpm,
+    fracDPM,
+    fracRPM,
+    // §5.3.5 Particionamento
+    argilaPercent,
+    xParticionamento,
+    fracCO2,
+    fracBioHum,
+    // §5.3.2 Fator A
+    fatorA_mes1,
+    tempC_mes1: cl0.tempC,
+    // §5.3.3 Fator B
+    fatorB_mes1: fatorBResult_mes1.b,
+    maxTSMD: fatorBResult_mes1.maxTSMD,
+    // §5.3.4 Fator C
+    fatorC_mes1,
+    // §5.3.1 Constantes k
+    k_DPM: K_ROTHC['DPM'],
+    k_RPM: K_ROTHC['RPM'],
+    k_BIO: K_ROTHC['BIO'],
+    k_HUM: K_ROTHC['HUM'],
+    // Compartimentos finais
+    compartimentosFinalDPM: compartimentos.DPM,
+    compartimentosFinalRPM: compartimentos.RPM,
+    compartimentosFinalBIO: compartimentos.BIO,
+    compartimentosFinalHUM: compartimentos.HUM,
+    compartimentosFinalIOM: compartimentos.IOM,
+    // Conversão final
+    deltaSocTcHa,
+    co2Tco2eHaCalc: co2Tco2eHa,
+  }
+
   return {
     socPorAno,
     deltaSocTcHa,
     co2Tco2eHa,
     compartimentosFinal: { ...compartimentos },
+    intermediarios,
   }
 }
