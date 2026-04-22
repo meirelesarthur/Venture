@@ -58,7 +58,7 @@
   /* Tipografia — Poppins (corpo) + DIN Arabic (headings) */
   --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'DIN Arabic', ui-sans-serif, system-ui, sans-serif;
-  
+
   --shadow-soft: 0 4px 40px rgba(0, 0, 0, 0.03);
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.02);
 }
@@ -306,5 +306,14 @@ h3 {
   .landing-features {
     flex-direction: column;
     gap: 1.5rem;
+  }
+}
+
+@layer base {
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup-tip {
+    @apply hidden!;
   }
 }

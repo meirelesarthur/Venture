@@ -19,11 +19,18 @@ const LABEL_COMB: Record<string,string> = { diesel: 'Diesel B', gasolina: 'Gasol
 // EF CO2 por litro (kgCO2/L)
 const EF_COMB: Record<string,number> = { diesel: 2.63, gasolina: 2.27, etanol: 0, eletricidade: 0 }
 
-interface Props { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean; manejoId?: string }
+interface Props {
+  talhaoIds: string[]
+  fazendaId: string
+  anoAgricola: number
+  locked: boolean
+}
 
-export default function OperacionalForm({ talhaoId, fazendaId, anoAgricola, locked, manejoId }: Props) {
+export default function OperacionalForm({ talhaoIds, fazendaId, anoAgricola, locked }: Props) {
   const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
-  const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
+
+  const primeiroTalhaoId = talhaoIds[0]
+  const existente = manejo.find(m => m.talhaoId === primeiroTalhaoId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
   const [ops, setOps] = useState<OperacaoMec[]>(existente?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
   const [opFiles, setOpFiles] = useState<Record<number, string>>({})
 
@@ -39,9 +46,10 @@ export default function OperacionalForm({ talhaoId, fazendaId, anoAgricola, lock
   }
 
   useEffect(() => {
-    const m = manejo.find(x => (fazendaId ? x.fazendaId === fazendaId : x.talhaoId === talhaoId) && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    setOps(m?.operacoes ?? [{ operacao:'', combustivel:'diesel', litros:0 }])
-  }, [talhaoId, fazendaId, anoAgricola])
+    const primeiroTalhaoId = talhaoIds[0]
+    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    setOps(m?.operacoes ?? [{ operacao: '', combustivel: 'diesel', litros: 0 }])
+  }, [talhaoIds, anoAgricola])
 
   const update = (i: number, f: keyof OperacaoMec, v: any) =>
     setOps(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
@@ -49,11 +57,22 @@ export default function OperacionalForm({ talhaoId, fazendaId, anoAgricola, lock
   const totalCO2 = ops.reduce((acc, op) => acc + (EF_COMB[op.combustivel] ?? 0) * op.litros / 1000, 0)
 
   const handleSave = () => {
-    const payload = {
-      talhaoId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const, operacoes: ops,
-    }
-    if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
-    toast.success('Dados operacionais salvos!')
+    if (!talhaoIds.length) { toast.error('Nenhum talhão selecionado.'); return }
+
+    talhaoIds.forEach(tId => {
+      const payload = {
+        talhaoId: tId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
+        operacoes: ops
+      }
+      const existingId = manejo.find(m => m.talhaoId === tId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')?.id
+      if (existingId) {
+        updateManejo(existingId, payload)
+      } else {
+        saveManejoRascunho(payload)
+      }
+    })
+
+    toast.success(`Dados operacionais salvos para ${talhaoIds.length} talhão(ões)!`)
   }
 
   return (

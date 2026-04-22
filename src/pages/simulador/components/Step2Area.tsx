@@ -5,50 +5,51 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { SimuladorData } from '../schema'
 import { ArrowRight, ArrowLeft, UploadCloud, CheckCircle2, FileX, Map as MapIcon } from 'lucide-react'
-import 'leaflet/dist/leaflet.css'
 import area from '@turf/area'
 import { cn } from '@/lib/utils'
 import { MapDemarcationOverlay } from '@/components/MapDemarcationOverlay'
 
+import { kml } from '@tmcw/togeojson'
+
 /**
  * Parseia KML e extrai coordenadas de Polygon/LineString/Point
- * Retorna um GeoJSON FeatureCollection
+ * Retorna um GeoJSON FeatureCollection usando togeojson
  */
 function kmlToGeoJson(kmlText: string): { geojson: any; hectares: number } | null {
   try {
     const parser = new DOMParser()
     const doc = parser.parseFromString(kmlText, 'text/xml')
-    const coordinates: number[][][] = []
+    const geojson = kml(doc)
+    
+    if (!geojson || !geojson.features || geojson.features.length === 0) return null
 
-    // Suporte a <Polygon> com <coordinates>
-    const polygons = doc.querySelectorAll('Polygon')
-    polygons.forEach(poly => {
-      const coordEl = poly.querySelector('outerBoundaryIs coordinates, coordinates')
-      if (!coordEl?.textContent) return
-      const coords = coordEl.textContent.trim().split(/\s+/).map(c => {
-        const [lng, lat] = c.split(',').map(Number)
-        return [lng, lat]
-      }).filter(c => !isNaN(c[0]) && !isNaN(c[1]))
-      if (coords.length >= 3) coordinates.push(coords)
-    })
+    // Calcular área apenas de polígonos
+    const totalArea = geojson.features.reduce((acc: number, f: any) => {
+      if (f.geometry && f.geometry.type === 'Polygon') {
+        return acc + area(f)
+      }
+      return acc
+    }, 0)
 
-    if (coordinates.length === 0) return null
-
-    const features = coordinates.map(coords => ({
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'Polygon', coordinates: [coords] }
-    }))
-
-    const geojson = { type: 'FeatureCollection', features }
-    const totalArea = features.reduce((acc, f) => acc + area(f as any), 0)
     return { geojson, hectares: totalArea / 10000 }
   } catch {
     return null
   }
 }
 
-export function Step2Area({ onNext, onPrev, onMapEditToggle }: { onNext: () => void; onPrev: () => void; onMapEditToggle?: (active: boolean) => void }) {
+export function Step2Area({ 
+  onNext, 
+  onPrev, 
+  onMapEditToggle, 
+  onLocationSelect,
+  onGeoJsonSelect
+}: { 
+  onNext: () => void; 
+  onPrev: () => void; 
+  onMapEditToggle?: (active: boolean) => void; 
+  onLocationSelect?: (coord: [number, number]) => void;
+  onGeoJsonSelect?: (geojson: any) => void;
+}) {
   const methods = useFormContext<SimuladorData>()
   const { register, formState: { errors }, watch } = methods
   const [kmlStatus, setKmlStatus] = useState<'idle' | 'ok' | 'error'>('idle')
@@ -83,6 +84,10 @@ export function Step2Area({ onNext, onPrev, onMapEditToggle }: { onNext: () => v
       }
       setKmlStatus('ok')
       methods.setValue('area.hectares', parseFloat(result.hectares.toFixed(2)), { shouldValidate: true })
+      
+      if (onGeoJsonSelect) {
+        onGeoJsonSelect(result.geojson)
+      }
     }
     reader.readAsText(file)
     e.target.value = '' // reset input
@@ -96,19 +101,9 @@ export function Step2Area({ onNext, onPrev, onMapEditToggle }: { onNext: () => v
       </div>
 
       <div className="space-y-6 max-w-sm mx-auto w-full">
-        <div className="p-5 border rounded-xl bg-surface/50 space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="area.hectares" className="text-base font-medium">Área Total (hectares)</Label>
-            <Input id="area.hectares" type="number" step="0.01" className="text-lg py-6" placeholder="Ex: 500"
-              {...register('area.hectares', { valueAsNumber: true })} />
-            {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
-          </div>
-          <p className="text-xs text-muted text-center">Insira apenas a área produtiva elegível.</p>
-        </div>
-
         {/* Upload KML */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Ou calcule traçando a área elegível</Label>
+          <Label className="text-sm font-medium">Demarque a área elegível (Opcional)</Label>
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" className="h-20 flex-col gap-2 rounded-xl text-border hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-colors" onClick={() => handleMapToggle(true)}>
               <MapIcon size={20} />
@@ -129,6 +124,18 @@ export function Step2Area({ onNext, onPrev, onMapEditToggle }: { onNext: () => v
               )}
             </label>
           </div>
+        </div>
+
+        <div className="p-5 border rounded-xl bg-surface/50 space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="area.hectares" className="text-base font-medium">Área Total (hectares) *</Label>
+            <Input id="area.hectares" type="number" step="0.01" className="text-lg py-6" placeholder="Ex: 500"
+              {...register('area.hectares', { valueAsNumber: true })} />
+            {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
+          </div>
+          <p className="text-xs text-muted text-center">
+            Mínimo aceito de <strong className="text-primary">500 hectares</strong> de área elegível.
+          </p>
         </div>
       </div>
 

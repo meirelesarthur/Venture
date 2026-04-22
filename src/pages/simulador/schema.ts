@@ -15,17 +15,16 @@ export const simuladorSchema = z.object({
     hectares: z.coerce.number().min(1, 'A área deve ser maior que 0').max(1000000, 'Área muito grande'),
     kmlFile: z.any().optional(), // File upload not strictly typed here for simplicity
   }),
-  culturas: z.array(z.object({
+  talhoes: z.array(z.object({
     id: z.string(),
     nome: z.string(),
+    areaHectares: z.number(),
+    cultura: z.string().optional(),
     tipo_preparo: z.enum(['convencional', 'reduzido', 'direto']).optional(),
     usa_cobertura: z.boolean().optional(),
-    usa_org: z.boolean().optional(),
     tem_pecuaria: z.boolean().optional(),
-    has_safrinha: z.boolean().optional(),
-    safrinha_nome: z.string().optional(),
-  })).min(1, 'Selecione pelo menos uma cultura'),
-  praticas: z.array(z.string()).min(1, 'Selecione pelo menos uma prática para simulação'),
+    praticas: z.array(z.string()).optional()
+  })).min(1, 'Demarque pelo menos um talhão'),
   horizonte: z.enum(['10', '20']),
 })
 

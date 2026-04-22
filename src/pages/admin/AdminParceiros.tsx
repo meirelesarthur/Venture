@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { useState } from 'react'
 
 export default function AdminParceiros() {
-  const { parceiros, addParceiro } = useDataStore()
+  const { parceiros, addParceiro, updateParceiro } = useDataStore()
   const [open, setOpen] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -81,6 +81,7 @@ export default function AdminParceiros() {
               <TableRow>
                 <TableHead>Parceiro</TableHead>
                 <TableHead>Contato</TableHead>
+                <TableHead className="text-center">Comissão (%)</TableHead>
                 <TableHead className="text-center">Leads Gerados</TableHead>
                 <TableHead className="text-right">Comissão Total</TableHead>
                 <TableHead className="text-center">Status</TableHead>
@@ -94,6 +95,17 @@ export default function AdminParceiros() {
                   <TableCell className="text-muted-foreground text-sm">
                     <div className="flex items-center gap-2">
                       <Mail size={14} /> {p.email}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Input 
+                        type="number" 
+                        defaultValue={p.comissaoPercentual ?? 100}
+                        className="w-16 h-8 text-center text-xs"
+                        onBlur={(e) => updateParceiro(p.id, { comissaoPercentual: Number(e.target.value) })}
+                      />
+                      <span className="text-xs text-muted-foreground">%</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center font-medium">{p.leadsGerados}</TableCell>

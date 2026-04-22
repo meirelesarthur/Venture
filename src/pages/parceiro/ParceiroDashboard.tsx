@@ -13,6 +13,9 @@ export default function ParceiroDashboard() {
 
   // Para o parceiro mock (carlos-1 = parceiro-1 = p1)
   const parceiroId = 'p1'
+  const parceiroAtual = parceiros.find(p => p.id === parceiroId)
+  const comissaoPercentual = parceiroAtual?.comissaoPercentual ?? 100
+
   const meusLeads = leads.filter(l => l.parceiroId === parceiroId)
   const minhasComissoes = comissoes.filter(c => c.parceiroId === parceiroId)
   const totalPago = minhasComissoes.filter(c => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
@@ -144,8 +147,9 @@ export default function ParceiroDashboard() {
                   <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-border rounded-xl shadow-lg p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <p className="text-xs font-medium text-foreground mb-2">Regras de Comissão</p>
                     <div className="space-y-1.5 text-xs text-muted-foreground">
-                      <p><strong className="text-success">Ano 0 (Garantido):</strong> Pago na assinatura do contrato + coleta de solo. Calculado como ha × US$ 1,00/ha × PTAX.</p>
+                      <p><strong className="text-success">Ano 0 (Garantido):</strong> Pago na assinatura do contrato + coleta de solo. Calculado como ha × US$ 1,00/ha × PTAX{comissaoPercentual !== 100 ? ` × ${comissaoPercentual}%` : ''}.</p>
                       <p><strong className="text-primary">Anos 2, 4, 6, 8, 10:</strong> Condicionado à performance de créditos emitidos. Cálculo: (VCUs/2) × ha × US$/ha × PTAX.</p>
+                      {comissaoPercentual !== 100 && <p className="text-primary font-bold mt-1">Sua taxa especial: {comissaoPercentual}%</p>}
                     </div>
                   </div>
                 </div>

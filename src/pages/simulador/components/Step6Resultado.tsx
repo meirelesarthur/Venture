@@ -29,21 +29,34 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
   const ptax = getParam('ptax_fallback') || 5.65
 
   const { receitas, tCO2eAno, receitaAnualMedia, receitaTotal } = useMemo(() => {
-    const area = data.area?.hectares || 0
     const anos = parseInt(data.horizonte || '10', 10)
     const preco_brl = preco_base_usd * ptax
 
-    const selectedFatores = (data.praticas || []).map(p => getParam(PRATICA_PARAM[p] || '') || 0.5).sort((a, b) => b - a)
-    let fC = 0
-    if (selectedFatores.length > 0) {
-      fC = selectedFatores[0] + 0.3 * selectedFatores.slice(1).reduce((acc, val) => acc + val, 0)
-    }
+    let tco2e_ano_total = 0
+    let receita_anual_carbono_total = 0
+    let area_total = 0
 
-    const tco2e_ano = area * fC
-    const receita_anual_carbono = tco2e_ano * preco_brl * (1 - BUFFER_POOL)
-    const ganho_produtividade = receita_anual_carbono * 0.06
-    const custo_praticas = area * 15 // ~R$ 15/ha/ano
-    const lucro_liquido = receita_anual_carbono + ganho_produtividade - custo_praticas
+    const talhoes = data.talhoes || []
+    talhoes.forEach(t => {
+      if (!t.praticas || t.praticas.length === 0 || t.areaHectares <= 0) return
+      area_total += t.areaHectares
+      
+      const valores = t.praticas.map(p => getParam(PRATICA_PARAM[p] || '') || 0.5).sort((a, b) => b - a)
+      let fC = 0
+      if (valores.length > 0) {
+        fC = valores[0] + 0.3 * valores.slice(1).reduce((acc, val) => acc + val, 0)
+      }
+
+      const tco2e_ano = t.areaHectares * fC
+      const receita_anual_carbono = tco2e_ano * preco_brl * (1 - BUFFER_POOL)
+
+      tco2e_ano_total += tco2e_ano
+      receita_anual_carbono_total += receita_anual_carbono
+    })
+
+    const ganho_produtividade = receita_anual_carbono_total * 0.06
+    const custo_praticas = area_total * 15 // ~R$ 15/ha/ano
+    const lucro_liquido = receita_anual_carbono_total + ganho_produtividade - custo_praticas
 
     const chartData = []
     let acumulado = 0
@@ -51,7 +64,7 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
       acumulado += lucro_liquido
       chartData.push({
         ano: `A ${i}`,
-        ganhoCarbono: Math.round(receita_anual_carbono),
+        ganhoCarbono: Math.round(receita_anual_carbono_total),
         ganhoProdutividade: Math.round(ganho_produtividade),
         custo: Math.round(custo_praticas),
         lucroLiquido: Math.round(lucro_liquido),
@@ -61,12 +74,11 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
 
     return {
       receitas: chartData,
-      tCO2eAno: Math.round(tco2e_ano),
+      tCO2eAno: Math.round(tco2e_ano_total),
       receitaAnualMedia: lucro_liquido,
       receitaTotal: lucro_liquido * anos,
-      fatorCombinado: fC,
     }
-  }, [data, getParam, preco_base_usd, ptax])
+  }, [data.talhoes, data.horizonte, getParam, preco_base_usd, ptax])
 
   const fmt = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(n)
   const nome = data.lead?.nome?.split(' ')[0] ?? 'produtor'
@@ -77,7 +89,7 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
   )
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar p-6 space-y-6">
+    <div className="flex flex-col p-6 space-y-6">
       <div className="text-center space-y-3 pb-2 border-b border-border/50">
         <div className="mx-auto w-12 h-12 bg-success/10 text-success rounded-full flex items-center justify-center mb-2">
           <CheckCircle2 size={24} />

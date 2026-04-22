@@ -9,6 +9,10 @@ import { useDataStore } from '@/store/data'
 
 export default function ComissoesPage() {
   const comissoes = useDataStore((state) => state.comissoes)
+  const parceiros = useDataStore((state) => state.parceiros)
+  const parceiroAtual = parceiros.find(p => p.id === 'p1') // Mock current user
+  const comissaoPercentual = parceiroAtual?.comissaoPercentual ?? 100
+
   const totalPago = comissoes.filter(c => c.status === 'pago').reduce((acc, curr) => acc + curr.valor, 0)
   const totalProjetado = comissoes.filter(c => c.status === 'projetado').reduce((acc, curr) => acc + curr.valor, 0)
   const [showValues, setShowValues] = useState(false)
@@ -80,12 +84,17 @@ export default function ComissoesPage() {
             <p className="text-sm font-medium text-foreground">Como funciona a comissão?</p>
             <p>
               <strong className="text-success">● Ano 0 (Garantido):</strong> Comissão fixa paga na assinatura do contrato e coleta de solo.
-              Calculada como: <code className="bg-secondary px-1.5 py-0.5 rounded text-[11px]">ha × US$ 1,00/ha × PTAX</code>.
+              Calculada como: <code className="bg-secondary px-1.5 py-0.5 rounded text-[11px]">ha × US$ 1,00/ha × PTAX{comissaoPercentual !== 100 ? ` × ${comissaoPercentual}%` : ''}</code>.
             </p>
             <p>
               <strong className="text-primary">● Anos 2, 4, 6, 8, 10 (Condicionados):</strong> Comissão variável condicionada à performance
               de créditos emitidos e vendidos. Calculada como: <code className="bg-secondary px-1.5 py-0.5 rounded text-[11px]">(VCUs_emitidos ÷ 2) × ha × US$/ha × PTAX</code>.
             </p>
+            {comissaoPercentual !== 100 && (
+              <p className="text-primary font-bold mt-2">
+                ✨ Sua taxa especial de parceiro ativada: {comissaoPercentual}% do valor base.
+              </p>
+            )}
             <p className="text-[11px] text-muted">
               Os valores dos anos condicionados são estimativas e dependem do resultado real do motor de cálculos, validação do auditor e condições de mercado.
             </p>

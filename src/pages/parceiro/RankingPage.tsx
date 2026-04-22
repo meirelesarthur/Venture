@@ -61,6 +61,18 @@ export default function RankingPage() {
         <p className="text-muted">Posição relativa anônima por volume de hectares originados.</p>
       </div>
 
+      {/* Legenda de níveis — compacta */}
+      <div className="flex flex-wrap items-center justify-center gap-3 py-3 px-4 bg-surface border border-border/50 rounded-xl">
+        <span className="text-xs font-medium text-muted mr-1">Níveis:</span>
+        {NIVEIS.map(n => (
+          <div key={n.nome} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs ${n.bg}`}>
+            <span className={`font-semibold ${n.color}`}>{n.nome}</span>
+            <span className="text-muted-foreground">{n.min.toLocaleString('pt-BR')}–{n.max.toLocaleString('pt-BR')} ha</span>
+            {n.nome !== 'Bronze' && <span className="text-[9px] font-bold text-foreground/40">+20%</span>}
+          </div>
+        ))}
+      </div>
+
       {/* Minha posição */}
       {myPos > 0 && (
         <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between gap-4">
@@ -139,17 +151,6 @@ export default function RankingPage() {
         </CardContent>
       </Card>
 
-      {/* Legenda de níveis — compacta (footer) */}
-      <div className="flex flex-wrap items-center justify-center gap-3 py-3 px-4 bg-surface border border-border/50 rounded-xl">
-        <span className="text-xs font-medium text-muted mr-1">Níveis:</span>
-        {NIVEIS.map(n => (
-          <div key={n.nome} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs ${n.bg}`}>
-            <span className={`font-semibold ${n.color}`}>{n.nome}</span>
-            <span className="text-muted-foreground">{n.min.toLocaleString('pt-BR')}–{n.max.toLocaleString('pt-BR')} ha</span>
-            {n.nome !== 'Bronze' && <span className="text-[9px] font-bold text-foreground/40">+20%</span>}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

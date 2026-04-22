@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Save, Plus, Trash2 } from 'lucide-react'
 import { useDataStore } from '@/store/data'
-import type { CulturaManejo } from '@/store/data'
+import type { CulturaManejo, PlantaCobertura } from '@/store/data'
 import { toast } from 'sonner'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -23,17 +23,17 @@ const IRRIGACAO_TIPOS = ['pivo','gotejamento','aspersao','subsuperficial','inund
 const LABEL_IRRIG: Record<string,string> = { pivo: 'Pivô Central', gotejamento: 'Gotejamento', aspersao: 'Aspersão', subsuperficial: 'Subsuperficial', inundacao: 'Inundação' }
 
 interface Props {
-  talhaoId?: string
-  fazendaId?: string
+  talhaoIds: string[]
+  fazendaId: string
   anoAgricola: number
   locked: boolean
-  manejoId?: string
 }
 
-export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, manejoId }: Props) {
+export default function LavouraForm({ talhaoIds, fazendaId, anoAgricola, locked }: Props) {
   const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
 
-  const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
+  const primeiroTalhaoId = talhaoIds[0]
+  const existente = manejo.find(m => m.talhaoId === primeiroTalhaoId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
 
   // Map legacy fields into cultures array if 'culturas' doesn't exist
   const initCulturas: CulturaManejo[] = existente?.culturas && existente.culturas.length > 0 
@@ -45,6 +45,7 @@ export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, 
     : [{ id: uuidv4(), nome: '' }]
 
   const [culturas, setCulturas] = useState<CulturaManejo[]>(initCulturas)
+  const [plantas, setPlantas] = useState<PlantaCobertura[]>(existente?.plantasCobertura ?? [])
   
   const [preparo, setPreparo] = useState('direto')
   const [residuosCampo, setResiduosCampo] = useState(existente?.residuosCampo ?? true)
@@ -52,9 +53,10 @@ export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, 
   const [usaIrrigacao, setUsaIrrigacao] = useState(existente?.usaIrrigacao ?? false)
   const [tipoIrrig, setTipoIrrig] = useState(existente?.tipoIrrigacao ?? '')
 
-  // Atualiza ao trocar de talhão/fazenda/ano
+  // Atualiza ao trocar de talhão/ano
   useEffect(() => {
-    const m = manejo.find(x => (fazendaId ? x.fazendaId === fazendaId : x.talhaoId === talhaoId) && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    const primeiroTalhaoId = talhaoIds[0]
+    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
     if (m) {
       if (m.culturas && m.culturas.length > 0) {
         setCulturas(m.culturas)
@@ -67,11 +69,12 @@ export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, 
       setQueimaResiduos(m.queimaResiduos ?? false)
       setUsaIrrigacao(m.usaIrrigacao ?? false)
       setTipoIrrig(m.tipoIrrigacao ?? '')
+      setPlantas(m.plantasCobertura ?? [])
     } else {
       setCulturas([{ id: uuidv4(), nome: '' }])
-      setResiduosCampo(true); setQueimaResiduos(false); setUsaIrrigacao(false); setTipoIrrig('')
+      setResiduosCampo(true); setQueimaResiduos(false); setUsaIrrigacao(false); setTipoIrrig(''); setPlantas([])
     }
-  }, [talhaoId, fazendaId, anoAgricola])
+  }, [talhaoIds, anoAgricola])
 
   const handleUpdateCultura = (id: string, field: keyof CulturaManejo, value: any) => {
     setCulturas(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
@@ -86,15 +89,25 @@ export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, 
   }
 
   const handleSave = () => {
-    if (!talhaoId && !fazendaId) { toast.error('Seleção inválida.'); return }
+    if (!talhaoIds.length) { toast.error('Nenhum talhão selecionado.'); return }
     if (culturas.some(c => !c.nome)) { toast.error('Selecione a cultura para todos os registros.'); return }
-    const payload = {
-      talhaoId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
-      culturas,
-      residuosCampo, queimaResiduos, usaIrrigacao, tipoIrrigacao: usaIrrigacao ? tipoIrrig : undefined,
-    }
-    if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
-    toast.success('Dados de lavoura salvos!')
+    
+    talhaoIds.forEach(tId => {
+      const payload = {
+        talhaoId: tId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
+        culturas, plantasCobertura: plantas,
+        residuosCampo, queimaResiduos, usaIrrigacao, tipoIrrigacao: usaIrrigacao ? tipoIrrig : undefined,
+      }
+      
+      const existingId = manejo.find(m => m.talhaoId === tId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')?.id
+      if (existingId) {
+        updateManejo(existingId, payload)
+      } else {
+        saveManejoRascunho(payload)
+      }
+    })
+    
+    toast.success(`Dados de lavoura salvos para ${talhaoIds.length} talhão(ões)!`)
   }
 
   return (
@@ -215,6 +228,51 @@ export default function LavouraForm({ talhaoId, fazendaId, anoAgricola, locked, 
         {!locked && (
           <Button type="button" variant="outline" onClick={handleAddCultura} className="w-full rounded-xl border-dashed h-12 text-muted-foreground hover:text-foreground">
             <Plus size={16} className="mr-2" /> Adicionar Nova Safra / Área
+          </Button>
+        )}
+      </div>
+
+      <Separator />
+
+      <div className="space-y-4">
+        <div>
+          <Label className="text-base font-semibold">Plantas de Cobertura</Label>
+          <p className="text-xs text-muted">Mix ou culturas solteiras usadas para proteção de solo e ciclagem.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {plantas.map((p, i) => (
+            <div key={i} className="p-4 border border-border/50 rounded-xl bg-surface/50 space-y-4 relative">
+              <div className="space-y-2 pr-6">
+                <Label className="text-xs">Espécie / Nome do Mix</Label>
+                <Input value={p.especie} onChange={e => setPlantas(prev => prev.map((x, idx) => idx === i ? { ...x, especie: e.target.value } : x))} disabled={locked} className="rounded-xl h-9 text-sm" placeholder="Ex: Milheto + Braquiária" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Tipo</Label>
+                  <Select value={p.tipo} onValueChange={v => setPlantas(prev => prev.map((x, idx) => idx === i ? { ...x, tipo: v as 'mix' | 'solteira' } : x))} disabled={locked}>
+                    <SelectTrigger className="rounded-xl h-9 text-sm"><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="solteira">Solteira</SelectItem>
+                      <SelectItem value="mix">Mix de Espécies</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Data de Plantio</Label>
+                  <Input type="date" value={p.dataPlantio} onChange={e => setPlantas(prev => prev.map((x, idx) => idx === i ? { ...x, dataPlantio: e.target.value } : x))} disabled={locked} className="rounded-xl h-9 text-sm text-muted-foreground" />
+                </div>
+              </div>
+              {!locked && (
+                <button type="button" className="absolute top-3 right-3 text-muted hover:text-danger" onClick={() => setPlantas(prev => prev.filter((_, idx) => idx !== i))}>
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {!locked && (
+          <Button variant="outline" type="button" onClick={() => setPlantas(prev => [...prev, { especie: '', tipo: 'solteira', dataPlantio: '' }])} className="w-full rounded-xl border-dashed h-10 text-muted-foreground hover:text-foreground text-sm">
+            <Plus size={14} className="mr-2" /> Adicionar Planta de Cobertura
           </Button>
         )}
       </div>

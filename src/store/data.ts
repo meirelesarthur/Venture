@@ -62,13 +62,13 @@ export interface Talhao {
   socTimestamp?: string
 }
 
-export interface FertilizanteSint { tipo: string; qtdKgHa: number; usaInibidor: boolean }
-export interface FertilizanteOrg  { tipo: string; qtdTHa: number }
+export interface FertilizanteSint { tipo: string; qtdKgHa: number; usaInibidor: boolean; outroNome?: string }
+export interface FertilizanteOrg  { tipo: string; qtdTHa: number; outroNome?: string }
 export interface Calcario          { tipo: string; qtdTHa: number }
 export interface OperacaoMec      { operacao: string; combustivel: string; litros: number }
 export interface RegistroPecuaria {
   tipoAnimal: string; sistema: string; quantidade: number
-  pesoMedio: number; mesesNaArea: number; dieta: string
+  pesoMedio: number; mesesNaArea: number; dieta: string[]; dietaOutro?: string
 }
 
 export interface CulturaManejo {
@@ -83,6 +83,13 @@ export interface CulturaManejo {
   safrinhaDataPlantio?: string
   safrinhaDataColheita?: string
   safrinhaProdutividade?: number
+  safrinhaProdutividade?: number
+}
+
+export interface PlantaCobertura {
+  especie: string
+  tipo: 'mix' | 'solteira'
+  dataPlantio: string
 }
 
 export interface DadosManejoAnual {
@@ -96,6 +103,7 @@ export interface DadosManejoAnual {
   // Lavoura
   cultura?: string
   culturas?: CulturaManejo[]
+  plantasCobertura?: PlantaCobertura[]
   dataPlantio?: string
   dataColheita?: string
   produtividade?: number
@@ -108,6 +116,7 @@ export interface DadosManejoAnual {
   fertilizantesSint?: FertilizanteSint[]
   fertilizantesOrg?: FertilizanteOrg[]
   calcario?: Calcario[]
+  produtosBiologicos?: { nome: string }[]
   // Operacional
   operacoes?: OperacaoMec[]
   // Pecuária
@@ -244,6 +253,7 @@ export interface Parceiro {
   comissaoTotal: number
   hectaresCarteira?: number
   status: 'ativo' | 'convidado'
+  comissaoPercentual?: number // Ex: 100 para 100%, 120 para 120%
 }
 
 // ─── Novas entidades MVP ───────────────────────────────────────────────────────
@@ -718,9 +728,9 @@ const initialSites: ControlSite[] = [
 ]
 
 const initialParceiros: Parceiro[] = [
-  { id: 'p1', nome: 'AgroConsult Ltda', email: 'contato@agroconsult.com', leadsGerados: 12, comissaoTotal: 15400, hectaresCarteira: 6050, status: 'ativo' },
-  { id: 'p2', nome: 'Sindicato Rural MG', email: 'sindicato@ruralmg.org', leadsGerados: 5, comissaoTotal: 7012, hectaresCarteira: 850, status: 'ativo' },
-  { id: 'p3', nome: 'TechFarm Solutions', email: 'hello@techfarm.ag', leadsGerados: 0, comissaoTotal: 0, hectaresCarteira: 0, status: 'convidado' },
+  { id: 'p1', nome: 'AgroConsult Ltda', email: 'contato@agroconsult.com', leadsGerados: 12, comissaoTotal: 15400, hectaresCarteira: 6050, status: 'ativo', comissaoPercentual: 100 },
+  { id: 'p2', nome: 'Sindicato Rural MG', email: 'sindicato@ruralmg.org', leadsGerados: 5, comissaoTotal: 7012, hectaresCarteira: 850, status: 'ativo', comissaoPercentual: 120 },
+  { id: 'p3', nome: 'TechFarm Solutions', email: 'hello@techfarm.ag', leadsGerados: 0, comissaoTotal: 0, hectaresCarteira: 0, status: 'convidado', comissaoPercentual: 100 },
 ]
 
 const initialUsuarios: AppUser[] = [
@@ -819,6 +829,7 @@ interface DataState {
 
   // Parceiros
   addParceiro: (p: Omit<Parceiro, 'id'>) => void
+  updateParceiro: (id: string, changes: Partial<Parceiro>) => void
 
   // Lead
   addLead: (lead: Omit<Lead, 'id' | 'data'>) => string
@@ -1152,6 +1163,11 @@ export const useDataStore = create<DataState>()(
       addParceiro: (p) =>
         set((state) => ({
           parceiros: [...state.parceiros, { ...p, id: uuidv4() }],
+        })),
+        
+      updateParceiro: (id, changes) =>
+        set((state) => ({
+          parceiros: state.parceiros.map((p) => p.id === id ? { ...p, ...changes } : p),
         })),
 
       // ── Clima ─────────────────────────────────────────────────

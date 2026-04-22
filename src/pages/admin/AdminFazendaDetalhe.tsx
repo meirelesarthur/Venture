@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDataStore } from '@/store/data'
 import type { MrvStatus } from '@/store/data'
 import { toast } from 'sonner'
-import { ArrowLeft, Leaf, Droplets, Tractor, FileText, Settings2, Send, Thermometer, Cpu, Layers, Clock, AlertCircle, Lock, History } from 'lucide-react'
+import { ArrowLeft, Leaf, Droplets, Tractor, FileText, Settings2, Send, Thermometer, Cpu, Layers, Clock, AlertCircle, Lock, History, Grid } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function StatusBadge({ status }: { status: MrvStatus }) {
@@ -40,7 +40,7 @@ const ANOS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3
 
 export default function AdminFazendaDetalhe() {
   const { fazendaId } = useParams()
-  const { fazendas, clientes, manejo, submitManejo } = useDataStore()
+  const { fazendas, clientes, manejo, submitManejo, talhoes } = useDataStore()
 
   const fazenda = fazendas.find(f => f.id === fazendaId) ?? fazendas[0]
   const cliente = clientes.find(c => c.id === fazenda?.produtorId)
@@ -48,7 +48,16 @@ export default function AdminFazendaDetalhe() {
   const [anoAgricola, setAnoAgricola] = useState(CURRENT_YEAR)
   const [activeTab, setActiveTab] = useState('lavoura')
 
-  const manejoAtual = manejo.find(m => m.fazendaId === fazenda?.id && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
+  const projetoTalhoes = talhoes.filter(t => t.tipo === 'projeto' && t.fazendaId === fazenda?.id)
+  const [selectedTalhoes, setSelectedTalhoes] = useState<string[]>([])
+
+  useEffect(() => {
+    if (selectedTalhoes.length === 0 && projetoTalhoes.length > 0) {
+      setSelectedTalhoes(projetoTalhoes.map(t => t.id))
+    }
+  }, [projetoTalhoes, selectedTalhoes.length])
+
+  const primeiroManejo = manejo.find(m => m.talhaoId === selectedTalhoes[0] && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
   const locked = false // For admin, do we lock? Maybe not, or maybe just follow normal flow. We'll allow override.
 
   const MRV_STEPS = [
@@ -63,10 +72,22 @@ export default function AdminFazendaDetalhe() {
   ]
 
   const handleSubmit = () => {
-    if (!manejoAtual) { toast.error('Salve ao menos uma seção antes de submeter.'); return }
-    if (manejoAtual.status === 'aprovado') { toast.error('Dados já aprovados — imutáveis.'); return }
-    submitManejo(manejoAtual.id)
-    toast.success('Manejo submetido / validado com sucesso!')
+    if (!selectedTalhoes.length) { toast.error('Nenhum talhão selecionado.'); return }
+    
+    let count = 0;
+    selectedTalhoes.forEach(tId => {
+      const m = manejo.find(x => x.talhaoId === tId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+      if (m && m.status !== 'aprovado') {
+        submitManejo(m.id)
+        count++
+      }
+    })
+    
+    if (count > 0) {
+      toast.success(`Manejo de ${count} talhão(ões) submetido / validado com sucesso!`)
+    } else {
+      toast.error('Nenhum dado válido para submeter nos talhões selecionados.')
+    }
   }
 
   if (!fazenda) return <div>Fazenda não encontrada.</div>
@@ -106,15 +127,48 @@ export default function AdminFazendaDetalhe() {
         {/* Sub-Header */}
         <div className="px-6 py-4 border-b border-border/50 bg-surface/30 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-3">
-            <StatusBadge status={manejoAtual?.status || 'rascunho'} />
-            {manejoAtual?.status === 'aprovado' && <span className="text-xs text-primary font-bold">Modo Administrador (Edição Livre)</span>}
+            <StatusBadge status={primeiroManejo?.status || 'rascunho'} />
+            {primeiroManejo?.status === 'aprovado' && <span className="text-xs text-primary font-bold">Modo Administrador (Edição Livre)</span>}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={!manejoAtual} className="gap-2 rounded-xl h-9">
+            <Button size="sm" onClick={handleSubmit} disabled={!primeiroManejo} className="gap-2 rounded-xl h-9">
                 <Send size={14} /> Forçar Validação
             </Button>
           </div>
         </div>
+
+        {/* Barra de Seleção Lote */}
+        {activeTab !== 'talhoes' && activeTab !== 'motor' && activeTab !== 'historico' && (
+          <div className="px-6 py-3 border-b border-border/50 bg-surface/10 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Grid size={14} className="text-primary"/> Visualizando manejo de:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {projetoTalhoes.map(t => {
+                const isSelected = selectedTalhoes.includes(t.id);
+                return (
+                  <Badge 
+                    key={t.id}
+                    variant={isSelected ? "default" : "outline"}
+                    className={cn("cursor-pointer select-none transition-colors", !isSelected && "text-muted-foreground bg-background hover:bg-surface")}
+                    onClick={() => {
+                      if (isSelected && selectedTalhoes.length === 1) {
+                        toast.error('É necessário ter ao menos um talhão selecionado.');
+                        return;
+                      }
+                      setSelectedTalhoes(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]);
+                    }}
+                  >
+                    {t.nome}
+                  </Badge>
+                );
+              })}
+            </div>
+            <div className="ml-auto text-xs text-muted hidden md:block">
+              Editando {selectedTalhoes.length} talhão(ões)
+            </div>
+          </div>
+        )}
 
         {/* Layout with Sidebar */}
         <div className="flex-1 flex flex-col md:flex-row">
@@ -137,11 +191,11 @@ export default function AdminFazendaDetalhe() {
 
           {/* Conteúdo Central */}
           <div className="flex-1 p-6 overflow-x-hidden">
-            {activeTab === 'lavoura' && <LavouraForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-            {activeTab === 'pecuaria' && <PecuariaForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-            {activeTab === 'fertilizacao' && <FertilizacaoForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-            {activeTab === 'operacional' && <OperacionalForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-            {activeTab === 'documentos' && <DocumentosForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+            {activeTab === 'lavoura' && <LavouraForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+            {activeTab === 'pecuaria' && <PecuariaForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+            {activeTab === 'fertilizacao' && <FertilizacaoForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+            {activeTab === 'operacional' && <OperacionalForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+            {activeTab === 'documentos' && <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
             
             {activeTab === 'talhoes' && <AdminTalhoesTab fazendaId={fazenda.id} />}
             {activeTab === 'motor' && <AdminMotorTab fazendaId={fazenda.id} anoAgricola={anoAgricola} />}

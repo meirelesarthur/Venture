@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Users, Plus, Save, Trash2 } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import type { RegistroPecuaria } from '@/store/data'
@@ -19,27 +20,36 @@ const LABEL_SISTEMA: Record<string,string> = {
   confinamento: 'Confinamento', semi_confinamento: 'Semi-confinamento',
   extensivo: 'Extensivo', semi_extensivo: 'Semi-extensivo'
 }
-const DIETAS = ['pasto_degradado','pasto_melhorado','silagem','concentrado','misto']
-const LABEL_DIETA: Record<string,string> = {
-  pasto_degradado: 'Pasto Degradado', pasto_melhorado: 'Pasto Melhorado',
-  silagem: 'Silagem/Volumoso', concentrado: 'Concentrado', misto: 'Misto'
-}
+const DIETAS = [
+  { id: 'pasto', label: 'Pasto' },
+  { id: 'silagem_volumoso', label: 'Silagem/Volumoso' },
+  { id: 'concentrado', label: 'Concentrado' },
+  { id: 'outro', label: 'Outro' }
+]
 
 const emptyAnimal = (): RegistroPecuaria => ({
-  tipoAnimal: '', sistema: 'extensivo', quantidade: 0, pesoMedio: 450, mesesNaArea: 12, dieta: 'pasto_melhorado'
+  tipoAnimal: '', sistema: 'extensivo', quantidade: 0, pesoMedio: 450, mesesNaArea: 12, dieta: ['pasto']
 })
 
-interface Props { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean; manejoId?: string }
+interface Props {
+  talhaoIds: string[]
+  fazendaId: string
+  anoAgricola: number
+  locked: boolean
+}
 
-export default function PecuariaForm({ talhaoId, fazendaId, anoAgricola, locked, manejoId }: Props) {
+export default function PecuariaForm({ talhaoIds, fazendaId, anoAgricola, locked }: Props) {
   const { saveManejoRascunho, updateManejo, manejo } = useDataStore()
-  const existente = manejoId ? manejo.find(m => m.id === manejoId) : undefined
+
+  const primeiroTalhaoId = talhaoIds[0]
+  const existente = manejo.find(m => m.talhaoId === primeiroTalhaoId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
   const [registros, setRegistros] = useState<RegistroPecuaria[]>(existente?.pecuaria ?? [emptyAnimal()])
 
   useEffect(() => {
-    const m = manejo.find(x => (fazendaId ? x.fazendaId === fazendaId : x.talhaoId === talhaoId) && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    setRegistros(m?.pecuaria ?? [emptyAnimal()])
-  }, [talhaoId, fazendaId, anoAgricola])
+    const primeiroTalhaoId = talhaoIds[0]
+    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+    setRegistros(m?.pecuaria && m.pecuaria.length > 0 ? m.pecuaria : [emptyAnimal()])
+  }, [talhaoIds, anoAgricola])
 
   const update = (i: number, field: keyof RegistroPecuaria, value: any) => {
     setRegistros(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
@@ -53,12 +63,22 @@ export default function PecuariaForm({ talhaoId, fazendaId, anoAgricola, locked,
   }
 
   const handleSave = () => {
-    const payload = {
-      talhaoId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
-      pecuaria: registros,
-    }
-    if (manejoId) { updateManejo(manejoId, payload) } else { saveManejoRascunho(payload) }
-    toast.success('Dados de pecuária salvos!')
+    if (!talhaoIds.length) { toast.error('Nenhum talhão selecionado.'); return }
+
+    talhaoIds.forEach(tId => {
+      const payload = {
+        talhaoId: tId, fazendaId, anoAgricola, cenario: 'projeto' as const, status: 'rascunho' as const,
+        pecuaria: registros,
+      }
+      const existingId = manejo.find(m => m.talhaoId === tId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')?.id
+      if (existingId) {
+        updateManejo(existingId, payload)
+      } else {
+        saveManejoRascunho(payload)
+      }
+    })
+
+    toast.success(`Dados de pecuária salvos para ${talhaoIds.length} talhão(ões)!`)
   }
 
   return (
@@ -104,14 +124,39 @@ export default function PecuariaForm({ talhaoId, fazendaId, anoAgricola, locked,
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-1 sm:col-span-2 md:col-span-1">
                 <Label>Dieta Predominante</Label>
-                <Select value={r.dieta} onValueChange={v => update(i, 'dieta', v)} disabled={locked}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {DIETAS.map(d => <SelectItem key={d} value={d}>{LABEL_DIETA[d]}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-2 pt-1">
+                  {DIETAS.map(d => {
+                    const checked = Array.isArray(r.dieta) && r.dieta.includes(d.id);
+                    return (
+                      <label key={d.id} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                        <Checkbox 
+                          checked={checked} 
+                          onCheckedChange={(c) => {
+                            const arr = Array.isArray(r.dieta) ? [...r.dieta] : [];
+                            if (c) {
+                              update(i, 'dieta', [...arr, d.id]);
+                            } else {
+                              update(i, 'dieta', arr.filter(x => x !== d.id));
+                            }
+                          }}
+                          disabled={locked}
+                        />
+                        {d.label}
+                      </label>
+                    );
+                  })}
+                </div>
+                {Array.isArray(r.dieta) && r.dieta.includes('outro') && (
+                  <Input 
+                    placeholder="Descreva o adubo..." 
+                    value={r.dietaOutro || ''}
+                    onChange={e => update(i, 'dietaOutro', e.target.value)}
+                    disabled={locked}
+                    className="mt-2 text-sm h-8"
+                  />
+                )}
               </div>
 
               <div className="space-y-2">

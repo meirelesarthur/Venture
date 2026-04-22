@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils'
 interface Doc { name: string; type: string; size: string; status: 'enviado' | 'aprovado'; url: string }
 
 const CATEGORIAS = [
-  { id: 'laudo_solo',   label: 'Laudos de Solo (Laboratório)',    desc: 'PDF com análises de SOC%, BD, textura',   accept: '.pdf', required: true },
+  { id: 'laudo_solo',   label: 'Laudos de Solo (Agricultura de Precisão)',    desc: 'PDF com análises de SOC%, BD, textura',   accept: '.pdf', required: true },
   { id: 'fotos',        label: 'Fotos Geolocalizadas',             desc: 'JPEG/PNG com EXIF de GPS',                accept: 'image/*', required: true },
+  { id: 'doc_fundiario',label: 'Documentos Fundiários',            desc: 'CAR, Matrícula atualizada ou Contrato de Arrendamento', accept: '.pdf,.zip', required: true },
   { id: 'nfe_insumos',  label: 'Notas Fiscais de Insumos',         desc: 'PDF — fertilizantes, sementes, defensivos',accept: '.pdf', required: false },
   { id: 'kml_atualiz',  label: 'KML / Shapefile Atualizado',       desc: 'Talhões do projeto com delimitação atual', accept: '.kml,.kmz,.zip', required: false },
   { id: 'crea_anotacao', label: 'ART / RRT Agronômico',            desc: 'Anotação de responsabilidade técnica',     accept: '.pdf', required: false },
@@ -19,7 +20,7 @@ const MOCK_DOCS: Doc[] = [
   { name: 'fotos_talhao_a1.zip', type: 'fotos', size: '18.5 MB', status: 'enviado', url: '#' },
 ]
 
-export default function DocumentosForm({ locked }: { talhaoId?: string; fazendaId?: string; anoAgricola: number; locked: boolean }) {
+export default function DocumentosForm({ locked }: { talhaoIds: string[]; fazendaId: string; anoAgricola: number; locked: boolean }) {
   const [docs, setDocs] = useState<Doc[]>(MOCK_DOCS)
   const [uploading, setUploading] = useState<string | null>(null)
 
@@ -59,7 +60,7 @@ export default function DocumentosForm({ locked }: { talhaoId?: string; fazendaI
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-foreground">{cat.label}</p>
-                    {cat.required && <span className="text-xs text-danger font-medium">Obrigatório</span>}
+                    {cat.required && <Badge variant="destructive" className="bg-danger/10 text-danger border-danger/20 hover:bg-danger/20 shadow-none text-[10px] uppercase px-1.5 py-0">Obrigatório</Badge>}
                   </div>
                   <p className="text-xs text-muted mt-0.5">{cat.desc}</p>
                 </div>

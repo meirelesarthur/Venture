@@ -117,20 +117,22 @@ export default function AdminDashboard() {
           { label: 'Motor de Cálculos', desc: 'Executar RothC e QA3 por propriedade', icon: Cpu, href: '/admin/motor/f1', color: 'text-warning' },
           { label: 'Parâmetros Globais', desc: 'PTAX, preço VCU, taxas e fatores globais', icon: Settings, href: '/admin/parametros', color: 'text-success' },
         ].map(card => (
-          <Card key={card.label} className="border-border/50 shadow-sm hover:border-primary/30 transition-colors bg-surface">
-            <CardContent className="p-5 flex items-start gap-4">
-              <div className={`h-10 w-10 rounded-xl bg-background flex items-center justify-center flex-shrink-0`}>
-                <card.icon size={20} className={card.color} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground text-sm">{card.label}</p>
-                <p className="text-xs text-muted mt-0.5">{card.desc}</p>
-              </div>
-              <Button size="sm" variant="ghost" asChild className="rounded-lg h-8 shrink-0">
-                <Link to={card.href}><ArrowRight size={14} /></Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <Link key={card.label} to={card.href} className="block group">
+            <Card className="border-border/50 shadow-sm group-hover:border-primary/50 group-hover:shadow-md group-hover:-translate-y-0.5 transition-all duration-200 bg-surface h-full cursor-pointer">
+              <CardContent className="p-5 flex items-start gap-4 h-full">
+                <div className={`h-10 w-10 rounded-xl bg-background flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-colors`}>
+                  <card.icon size={20} className={card.color} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{card.label}</p>
+                  <p className="text-xs text-muted mt-0.5">{card.desc}</p>
+                </div>
+                <div className="flex items-center justify-center h-8 w-8 text-muted group-hover:text-primary transition-colors shrink-0 mt-1">
+                  <ArrowRight size={16} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>

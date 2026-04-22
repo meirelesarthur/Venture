@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDataStore } from '@/store/data'
 import type { MrvStatus } from '@/store/data'
 import { Card, CardContent } from '@/components/ui/card'
@@ -123,8 +123,16 @@ export default function MrvPage() {
   const [novoTalhaoData, setNovoTalhaoData] = useState<{ hectares: number, points: [number, number][] } | null>(null)
   const [novoTalhaoNome, setNovoTalhaoNome] = useState('')
 
-  const manejoAtual = manejo.find(m => m.fazendaId === fazenda?.id && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
-  const locked = manejoAtual?.status === 'aprovado' || isYearLocked
+  const [selectedTalhoes, setSelectedTalhoes] = useState<string[]>([])
+
+  useEffect(() => {
+    if (selectedTalhoes.length === 0 && projetoTalhoes.length > 0) {
+      setSelectedTalhoes(projetoTalhoes.map(t => t.id))
+    }
+  }, [projetoTalhoes, selectedTalhoes.length])
+
+  const primeiroManejo = manejo.find(m => m.talhaoId === selectedTalhoes[0] && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
+  const locked = primeiroManejo?.status === 'aprovado' || isYearLocked
 
   const MRV_STEPS = [
     { id: 'lavoura', name: 'Lavoura', Icon: Leaf },
@@ -136,11 +144,23 @@ export default function MrvPage() {
   ]
 
   const handleSubmit = () => {
-    if (!manejoAtual) { toast.error('Salve ao menos uma seção antes de submeter.'); return }
-    if (manejoAtual.status === 'aprovado') { toast.error('Dados já aprovados — imutáveis.'); return }
+    if (!selectedTalhoes.length) { toast.error('Nenhum talhão selecionado.'); return }
     if (isYearLocked) { toast.error('Dados de anos anteriores são somente leitura.'); return }
-    submitManejo(manejoAtual.id)
-    toast.success('Manejo da fazenda submetido para validação!')
+    
+    let count = 0;
+    selectedTalhoes.forEach(tId => {
+      const m = manejo.find(x => x.talhaoId === tId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
+      if (m && m.status !== 'aprovado' && m.status !== 'pendente') {
+        submitManejo(m.id)
+        count++
+      }
+    })
+    
+    if (count > 0) {
+      toast.success(`Manejo de ${count} talhão(ões) submetido para validação!`)
+    } else {
+      toast.error('Nenhum dado válido para submeter nos talhões selecionados.')
+    }
   }
 
   const handleDemarcationComplete = (points: [number, number][], hectares: number) => {
@@ -188,7 +208,7 @@ export default function MrvPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ANOS.map(a => <SelectItem key={a} value={String(a)}>{a}/{a+1} {a < CURRENT_YEAR ? '🔒' : ''}</SelectItem>)}
+                    {ANOS.map(a => <SelectItem key={a} value={String(a)}>{a} {a < CURRENT_YEAR ? '🔒' : ''}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <div className="flex items-center gap-2 text-[10px] text-muted uppercase font-bold tracking-tight bg-background/50 px-3 py-1.5 rounded-lg border border-border/50">
@@ -203,19 +223,52 @@ export default function MrvPage() {
         <div className="bg-background border border-border/50 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
           <div className="px-6 py-4 border-b border-border/50 bg-surface/30 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
-              <StatusBadge status={manejoAtual?.status || 'rascunho'} />
-              {manejoAtual?.status === 'correcao' && (
+              <StatusBadge status={primeiroManejo?.status || 'rascunho'} />
+              {primeiroManejo?.status === 'correcao' && (
                 <span className="text-xs text-danger bg-danger/5 px-2 py-1 rounded border border-danger/10 max-w-[200px] truncate">
-                  {manejoAtual.comentarioCorrecao}
+                  {primeiroManejo.comentarioCorrecao}
                 </span>
               )}
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Button size="sm" onClick={handleSubmit} disabled={!manejoAtual || locked || manejoAtual.status === 'pendente' || activeTab === 'talhoes'} className="gap-2 rounded-xl h-9">
-                  <Send size={14} /> {manejoAtual?.status === 'pendente' ? 'Em Validação' : 'Submeter Manejo'}
+              <Button size="sm" onClick={handleSubmit} disabled={locked || primeiroManejo?.status === 'pendente' || activeTab === 'talhoes'} className="gap-2 rounded-xl h-9">
+                  <Send size={14} /> {primeiroManejo?.status === 'pendente' ? 'Em Validação' : 'Submeter Manejo'}
               </Button>
             </div>
           </div>
+
+          {/* Barra de Seleção Lote */}
+          {activeTab !== 'talhoes' && (
+            <div className="px-6 py-3 border-b border-border/50 bg-surface/10 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Grid size={14} className="text-primary"/> Aplicar manejo em:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {projetoTalhoes.map(t => {
+                  const isSelected = selectedTalhoes.includes(t.id);
+                  return (
+                    <Badge 
+                      key={t.id}
+                      variant={isSelected ? "default" : "outline"}
+                      className={cn("cursor-pointer select-none transition-colors", !isSelected && "text-muted-foreground bg-background hover:bg-surface")}
+                      onClick={() => {
+                        if (isSelected && selectedTalhoes.length === 1) {
+                          toast.error('É necessário ter ao menos um talhão selecionado.');
+                          return;
+                        }
+                        setSelectedTalhoes(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]);
+                      }}
+                    >
+                      {t.nome}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="ml-auto text-xs text-muted hidden md:block">
+                Editando {selectedTalhoes.length} talhão(ões) simultaneamente
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 flex flex-col md:flex-row">
             <div className="w-full md:w-56 border-r border-border/50 bg-surface/10 p-4 space-y-1">
@@ -234,11 +287,11 @@ export default function MrvPage() {
             </div>
 
             <div className="flex-1 p-6">
-              {activeTab === 'lavoura' && <LavouraForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-              {activeTab === 'pecuaria' && <PecuariaForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-              {activeTab === 'fertilizacao' && <FertilizacaoForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-              {activeTab === 'operacional' && <OperacionalForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} manejoId={manejoAtual?.id} />}
-              {activeTab === 'documentos' && <DocumentosForm fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+              {activeTab === 'lavoura' && <LavouraForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+              {activeTab === 'pecuaria' && <PecuariaForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+              {activeTab === 'fertilizacao' && <FertilizacaoForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+              {activeTab === 'operacional' && <OperacionalForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
+              {activeTab === 'documentos' && <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
               
               {activeTab === 'talhoes' && (
                 <div className="space-y-4">
