@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Map, useMap } from '@/components/ui/map'
+import maplibregl from 'maplibre-gl'
 import type { StyleSpecification } from 'maplibre-gl'
 
 const satelliteStyle: StyleSpecification = {
@@ -168,7 +169,7 @@ function GeoJsonLayer({ geojson }: { geojson: any }) {
   return null
 }
 
-export function SimuladorMap({ center, zoom, geojson }: SimuladorMapProps) {
+export function SimuladorMap({ center, zoom, geojson, onMove }: SimuladorMapProps) {
   const lngLat: [number, number] = [center[1], center[0]]
 
   return (

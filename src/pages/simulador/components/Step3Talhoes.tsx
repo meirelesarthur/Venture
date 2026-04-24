@@ -1,3 +1,4 @@
+// @ts-nocheck — Componente removido do fluxo do simulador. Mantido para referência futura.
 import { useState } from 'react'
 import { useFormContext, useFieldArray } from 'react-hook-form'
 import { Button } from '@/components/ui/button'

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -81,31 +81,46 @@ export default function DashboardPage() {
 
   const currentPhase = getProjectPhase(userClient?.statusMRV ?? 'Aberto')
 
-  // ─── Empty State ────────────────────────────────────────────
+  // ─── Empty State (aprovado mas sem talhões) ──────────────────
   if (isEmpty) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Olá, {user?.name ?? 'Produtor'}</h1>
-          <p className="text-muted">Bem-vindo à plataforma Venture Carbon.</p>
+          <h1 className="text-3xl font-bold text-foreground">Olá, {user?.name ?? 'Produtor'}! 🎉</h1>
+          <p className="text-muted">Seu cadastro foi aprovado. Complete o processo para começar a gerar créditos.</p>
         </div>
 
-        <Card className="border-border/50 shadow-sm">
-          <CardContent className="py-16 flex flex-col items-center text-center">
-            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-              <ClipboardList size={36} className="text-primary" />
+        {/* Banner pós-aprovação */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-success/5 shadow-sm">
+          <CardContent className="py-10 flex flex-col items-center text-center space-y-4">
+            <div className="h-16 w-16 rounded-2xl bg-primary/15 flex items-center justify-center">
+              <PartyPopper size={32} className="text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Configure seu Projeto</h2>
-            <p className="text-muted max-w-md mb-2">
-              Para iniciarmos seu projeto de créditos de carbono, precisamos dos dados da sua propriedade.
-              Preencha as informações abaixo e nossa equipe irá analisar e aprovar o cadastro.
-            </p>
-            <p className="text-xs text-muted-foreground mb-8">
-              Após o preenchimento, você receberá uma notificação assim que o projeto for aprovado.
-            </p>
-            <Button className="gap-2 h-12 px-8 rounded-xl text-base" onClick={() => navigate('/dashboard/perfil')}>
-              <Leaf size={18} />
-              Preencher Dados do Projeto
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Cadastro Aprovado!</h2>
+              <p className="text-sm text-muted max-w-md">
+                Parabéns! Sua propriedade foi analisada e aprovada pela Venture Carbon.
+                O próximo passo é cadastrar os <strong className="text-foreground">talhões da sua fazenda</strong> e informar os dados de manejo para iniciar o monitoramento.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3 w-full max-w-lg text-left">
+              {[
+                { n: '1', label: 'Área da Fazenda', desc: 'Faça upload do KML ou demarque no mapa', icon: MapPin },
+                { n: '2', label: 'Cadastre os Talhões', desc: 'Demarque cada talhão individualmente', icon: Layers },
+                { n: '3', label: 'Informe o Manejo', desc: 'Culturas e práticas por talhão', icon: Leaf },
+              ].map(step => (
+                <div key={step.n} className="bg-background/60 border border-border/50 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{step.n}</span>
+                    <step.icon size={13} className="text-primary" />
+                    <span className="text-xs font-bold text-foreground">{step.label}</span>
+                  </div>
+                  <p className="text-[11px] text-muted">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+            <Button className="gap-2 h-12 px-8 rounded-xl text-base bg-primary" onClick={() => navigate('/dashboard/mrv')}>
+              <Layers size={18} /> Ir para o MRV
             </Button>
           </CardContent>
         </Card>
@@ -140,6 +155,24 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Banner talhões pendentes */}
+      {meusTalhoes.filter(t => t.tipo === 'projeto').length === 0 && (
+        <Card className="border-primary/20 bg-primary/5 shadow-sm">
+          <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Layers size={20} className="text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-foreground">Cadastre seus talhões para iniciar o monitoramento</p>
+                <p className="text-xs text-muted">Demarque as áreas de cada talhão e informe o manejo para gerar seus créditos de carbono.</p>
+              </div>
+            </div>
+            <Button size="sm" className="rounded-xl gap-2 shrink-0" onClick={() => navigate('/dashboard/mrv')}>
+              <Layers size={14} /> Cadastrar Talhões
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Nova Barra de Progresso do Projeto (fases) */}
@@ -190,7 +223,7 @@ export default function DashboardPage() {
           <FazendaMap
             talhoes={meusTalhoes}
             height="360px"
-            onTalhaoClick={(talhaoId) => navigate('/dashboard/mrv', { state: { talhaoId } })}
+            onTalhaoClick={(talhaoId: string) => navigate('/dashboard/mrv', { state: { talhaoId } })}
           />
         </CardContent>
       </Card>

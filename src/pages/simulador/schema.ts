@@ -1,5 +1,16 @@
 import * as z from 'zod'
 
+const culturaSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  tipo_preparo: z.enum(['convencional', 'reduzido', 'direto']).optional(),
+  usa_cobertura: z.boolean().optional(),
+  usa_org: z.boolean().optional(),
+  tem_pecuaria: z.boolean().optional(),
+  has_safrinha: z.boolean().optional(),
+  safrinha_nome: z.string().optional(),
+})
+
 export const simuladorSchema = z.object({
   localizacao: z.object({
     fazenda: z.string().min(2, 'Nome da fazenda é obrigatório'),
@@ -13,19 +24,13 @@ export const simuladorSchema = z.object({
   }),
   area: z.object({
     hectares: z.coerce.number().min(1, 'A área deve ser maior que 0').max(1000000, 'Área muito grande'),
-    kmlFile: z.any().optional(), // File upload not strictly typed here for simplicity
+    kmlFile: z.any().optional(),
   }),
-  talhoes: z.array(z.object({
-    id: z.string(),
-    nome: z.string(),
-    areaHectares: z.number(),
-    cultura: z.string().optional(),
-    tipo_preparo: z.enum(['convencional', 'reduzido', 'direto']).optional(),
-    usa_cobertura: z.boolean().optional(),
-    tem_pecuaria: z.boolean().optional(),
-    praticas: z.array(z.string()).optional()
-  })).min(1, 'Demarque pelo menos um talhão'),
+  // Culturas gerais da propriedade — sem talhões no simulador
+  culturas: z.array(culturaSchema).optional(),
+  praticas: z.array(z.string()).optional(),
   horizonte: z.enum(['10', '20']),
 })
 
 export type SimuladorData = z.infer<typeof simuladorSchema>
+export type CulturaSimulador = z.infer<typeof culturaSchema>

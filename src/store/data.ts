@@ -83,7 +83,6 @@ export interface CulturaManejo {
   safrinhaDataPlantio?: string
   safrinhaDataColheita?: string
   safrinhaProdutividade?: number
-  safrinhaProdutividade?: number
 }
 
 export interface PlantaCobertura {
@@ -1245,6 +1244,26 @@ export const useDataStore = create<DataState>()(
           historicoFazendas: initialHistorico,
         }),
     }),
-    { name: 'venture-carbon-data', version: 3 }
+    { 
+      name: 'venture-carbon-data', 
+      version: 3,
+      migrate: (_persistedState, _version) => {
+        // On version mismatch, reset to initial state (protótipo)
+        return {
+          leads: initialLeads, clientes: initialClientes, fazendas: initialFazendas,
+          talhoes: initialTalhoes, manejo: initialManejo, comissoes: initialComissoes,
+          controlSites: initialSites, parceiros: initialParceiros,
+          parametros: initialParametros, resultadosMotor: initialResultados,
+          dadosClimaticos: initialClimaticos, notificacoes: [],
+          alertas: [
+            { id: 'al1', texto: 'Falha no sync do motor (Processo X).', resolvido: false, criadoEm: new Date().toISOString() },
+            { id: 'al2', texto: 'Site de controle SC-03 perdeu similaridade >10%.', resolvido: false, criadoEm: new Date().toISOString() }
+          ],
+          usuarios: initialUsuarios,
+          coletasSolo: [],
+          historicoFazendas: initialHistorico,
+        }
+      },
+    }
   )
 )
