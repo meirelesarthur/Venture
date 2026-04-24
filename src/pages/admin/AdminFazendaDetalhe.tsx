@@ -1,208 +1,135 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDataStore } from '@/store/data'
-import type { MrvStatus } from '@/store/data'
-import { toast } from 'sonner'
-import { ArrowLeft, Leaf, Droplets, Tractor, FileText, Settings2, Send, Thermometer, Cpu, Layers, Clock, AlertCircle, Lock, History, Grid } from 'lucide-react'
+import { ArrowLeft, Thermometer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-function StatusBadge({ status }: { status: MrvStatus }) {
-  if (status === 'rascunho') return null;
-  const cfg = {
-    pendente:  { label: 'Em Validação',  cls: 'bg-warning/10 text-warning border-warning/20' },
-    aprovado:  { label: 'Aprovado',      cls: 'bg-success/10 text-success border-success/20' },
-    correcao:  { label: 'Correção',      cls: 'bg-danger/10 text-danger border-danger/20' },
-  }[status as Exclude<MrvStatus, 'rascunho'>]
-  const icons = { pendente: <Clock size={11} />, aprovado: <Lock size={11} />, correcao: <AlertCircle size={11} /> }
-  return (
-    <Badge variant="outline" className={cn('flex items-center gap-1 text-xs shadow-none', cfg.cls)}>
-      {icons[status as keyof typeof icons]}
-      {cfg.label}
-    </Badge>
-  )
-}
-
-import LavouraForm from '@/pages/cliente/mrv/LavouraForm'
-import PecuariaForm from '@/pages/cliente/mrv/PecuariaForm'
-import FertilizacaoForm from '@/pages/cliente/mrv/FertilizacaoForm'
-import OperacionalForm from '@/pages/cliente/mrv/OperacionalForm'
-import DocumentosForm from '@/pages/cliente/mrv/DocumentosForm'
-
-import { AdminTalhoesTab } from './components/AdminTalhoesTab'
-import { AdminMotorTab } from './components/AdminMotorTab'
+import { MRVFazendaTab } from './components/mrv/MRVFazendaTab'
+import { TalhoesTab } from './components/mrv/TalhoesTab'
+import { MotorCalculosTab } from './components/mrv/MotorCalculosTab'
 import { AdminHistoricoTab } from './components/AdminHistoricoTab'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const ANOS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3]
 
+type L1Tab = 'fazenda' | 'talhoes' | 'motor' | 'historico'
+
+const TABS: { id: L1Tab; label: string }[] = [
+  { id: 'fazenda', label: 'Fazenda' },
+  { id: 'talhoes', label: 'Talhões' },
+  { id: 'motor', label: 'Motor de Cálculos' },
+  { id: 'historico', label: 'Histórico' },
+]
+
 export default function AdminFazendaDetalhe() {
   const { fazendaId } = useParams()
-  const { fazendas, clientes, manejo, submitManejo, talhoes } = useDataStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { fazendas, clientes, talhoes } = useDataStore()
 
   const fazenda = fazendas.find(f => f.id === fazendaId) ?? fazendas[0]
   const cliente = clientes.find(c => c.id === fazenda?.produtorId)
 
-  const [anoAgricola, setAnoAgricola] = useState(CURRENT_YEAR)
-  const [activeTab, setActiveTab] = useState('lavoura')
+  const tab = (searchParams.get('tab') as L1Tab) ?? 'fazenda'
+  const anoAgricola = Number(searchParams.get('ano')) || CURRENT_YEAR
 
-  const projetoTalhoes = talhoes.filter(t => t.tipo === 'projeto' && t.fazendaId === fazenda?.id)
-  const [selectedTalhoes, setSelectedTalhoes] = useState<string[]>([])
+  const projetoTalhaoIds = talhoes
+    .filter(t => t.tipo === 'projeto' && t.fazendaId === fazenda?.id)
+    .map(t => t.id)
 
-  useEffect(() => {
-    if (selectedTalhoes.length === 0 && projetoTalhoes.length > 0) {
-      setSelectedTalhoes(projetoTalhoes.map(t => t.id))
-    }
-  }, [projetoTalhoes, selectedTalhoes.length])
+  if (!fazenda) return <div className="p-6 text-muted">Fazenda não encontrada.</div>
 
-  const primeiroManejo = manejo.find(m => m.talhaoId === selectedTalhoes[0] && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
-  const locked = false // For admin, do we lock? Maybe not, or maybe just follow normal flow. We'll allow override.
+  const setTab = (t: L1Tab) =>
+    setSearchParams(prev => { prev.set('tab', t); return prev }, { replace: true })
 
-  const MRV_STEPS = [
-    { id: 'lavoura', name: 'Lavoura', Icon: Leaf },
-    { id: 'pecuaria', name: 'Pecuária', Icon: Tractor },
-    { id: 'fertilizacao', name: 'Fertilização', Icon: Droplets },
-    { id: 'operacional', name: 'Máquinas', Icon: Settings2 },
-    { id: 'documentos', name: 'Evidências', Icon: FileText },
-    { id: 'talhoes', name: 'Gestor de Talhões (Admin)', Icon: Layers },
-    { id: 'motor', name: 'Motor de Cálculos', Icon: Cpu },
-    { id: 'historico', name: 'Histórico', Icon: History },
-  ]
-
-  const handleSubmit = () => {
-    if (!selectedTalhoes.length) { toast.error('Nenhum talhão selecionado.'); return }
-    
-    let count = 0;
-    selectedTalhoes.forEach(tId => {
-      const m = manejo.find(x => x.talhaoId === tId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-      if (m && m.status !== 'aprovado') {
-        submitManejo(m.id)
-        count++
-      }
-    })
-    
-    if (count > 0) {
-      toast.success(`Manejo de ${count} talhão(ões) submetido / validado com sucesso!`)
-    } else {
-      toast.error('Nenhum dado válido para submeter nos talhões selecionados.')
-    }
-  }
-
-  if (!fazenda) return <div>Fazenda não encontrada.</div>
+  const setAno = (a: number) =>
+    setSearchParams(prev => { prev.set('ano', String(a)); return prev }, { replace: true })
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild className="rounded-full flex-shrink-0">
-            <Link to="/admin/fazendas"><ArrowLeft size={20} /></Link>
+            <Link to="/admin/fazendas"><ArrowLeft size={18} /></Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Gerenciar MRV: {fazenda.nome}</h1>
-            <p className="text-sm text-muted">Produtor: {cliente?.nome} — {fazenda.municipio}/{fazenda.estado}</p>
+            <h1 className="text-xl font-bold leading-tight">MRV: {fazenda.nome}</h1>
+            <p className="text-xs text-muted">
+              Produtor: {cliente?.nome} — {fazenda.municipio}/{fazenda.estado}
+            </p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <Select value={String(anoAgricola)} onValueChange={v => setAnoAgricola(Number(v))}>
-            <SelectTrigger className="w-40 rounded-xl font-bold bg-surface">
+        <div className="flex items-center gap-3">
+          <Select value={String(anoAgricola)} onValueChange={v => setAno(Number(v))}>
+            <SelectTrigger className="w-36 rounded-xl font-semibold text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ANOS.map(a => <SelectItem key={a} value={String(a)}>{a}/{a+1}</SelectItem>)}
+              {ANOS.map(a => (
+                <SelectItem key={a} value={String(a)}>Safra {a}/{a + 1}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2 text-[10px] text-muted uppercase font-bold tracking-tight bg-background/50 px-3 py-1.5 rounded-lg border border-border/50">
-            <Thermometer size={12} className="text-primary" /> INMET: {fazenda.municipio}
+          <div className="flex items-center gap-1.5 text-[10px] text-muted uppercase font-bold tracking-tight bg-background/50 px-3 py-1.5 rounded-lg border border-border/50">
+            <Thermometer size={12} className="text-primary" />
+            INMET: {fazenda.municipio}
           </div>
         </div>
       </div>
 
-      {/* Main MRV Interface */}
+      {/* ── Main card ── */}
       <div className="bg-background border border-border/50 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-        
-        {/* Sub-Header */}
-        <div className="px-6 py-4 border-b border-border/50 bg-surface/30 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3">
-            <StatusBadge status={primeiroManejo?.status || 'rascunho'} />
-            {primeiroManejo?.status === 'aprovado' && <span className="text-xs text-primary font-bold">Modo Administrador (Edição Livre)</span>}
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={!primeiroManejo} className="gap-2 rounded-xl h-9">
-                <Send size={14} /> Forçar Validação
-            </Button>
-          </div>
+
+        {/* ── Tab bar L1 ── */}
+        <div
+          className="flex border-b border-border/50 overflow-x-auto"
+          role="tablist"
+          aria-label="Navegação MRV"
+        >
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'px-5 py-3.5 text-sm font-semibold whitespace-nowrap transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500',
+                tab === t.id
+                  ? 'bg-teal-600 text-white'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/10'
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Barra de Seleção Lote */}
-        {activeTab !== 'talhoes' && activeTab !== 'motor' && activeTab !== 'historico' && (
-          <div className="px-6 py-3 border-b border-border/50 bg-surface/10 flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Grid size={14} className="text-primary"/> Visualizando manejo de:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {projetoTalhoes.map(t => {
-                const isSelected = selectedTalhoes.includes(t.id);
-                return (
-                  <Badge 
-                    key={t.id}
-                    variant={isSelected ? "default" : "outline"}
-                    className={cn("cursor-pointer select-none transition-colors", !isSelected && "text-muted-foreground bg-background hover:bg-surface")}
-                    onClick={() => {
-                      if (isSelected && selectedTalhoes.length === 1) {
-                        toast.error('É necessário ter ao menos um talhão selecionado.');
-                        return;
-                      }
-                      setSelectedTalhoes(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]);
-                    }}
-                  >
-                    {t.nome}
-                  </Badge>
-                );
-              })}
+        {/* ── Tab content ── */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {tab === 'fazenda' && (
+            <MRVFazendaTab
+              fazendaId={fazenda.id}
+              anoAgricola={anoAgricola}
+              talhaoIds={projetoTalhaoIds}
+            />
+          )}
+          {tab === 'talhoes' && (
+            <TalhoesTab fazendaId={fazenda.id} anoAgricola={anoAgricola} />
+          )}
+          {tab === 'motor' && (
+            <div className="p-6 overflow-y-auto flex-1">
+              <MotorCalculosTab fazendaId={fazenda.id} anoAgricola={anoAgricola} />
             </div>
-            <div className="ml-auto text-xs text-muted hidden md:block">
-              Editando {selectedTalhoes.length} talhão(ões)
+          )}
+          {tab === 'historico' && (
+            <div className="p-6 overflow-y-auto flex-1">
+              <AdminHistoricoTab fazendaId={fazenda.id} />
             </div>
-          </div>
-        )}
-
-        {/* Layout with Sidebar */}
-        <div className="flex-1 flex flex-col md:flex-row">
-          {/* Menu Lateral */}
-          <div className="w-full md:w-56 border-r border-border/50 bg-surface/10 p-4 space-y-1">
-            {MRV_STEPS.map(step => (
-              <button
-                key={step.id}
-                onClick={() => setActiveTab(step.id)}
-                className={cn(
-                  'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all',
-                  activeTab === step.id ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:bg-accent/10 hover:text-foreground',
-                  (step.id === 'talhoes' || step.id === 'motor') && activeTab !== step.id && 'text-primary/70 bg-primary/5 border border-primary/10'
-                )}
-              >
-                <step.Icon size={16} /> {step.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Conteúdo Central */}
-          <div className="flex-1 p-6 overflow-x-hidden">
-            {activeTab === 'lavoura' && <LavouraForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
-            {activeTab === 'pecuaria' && <PecuariaForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
-            {activeTab === 'fertilizacao' && <FertilizacaoForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
-            {activeTab === 'operacional' && <OperacionalForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
-            {activeTab === 'documentos' && <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />}
-            
-            {activeTab === 'talhoes' && <AdminTalhoesTab fazendaId={fazenda.id} />}
-            {activeTab === 'motor' && <AdminMotorTab fazendaId={fazenda.id} anoAgricola={anoAgricola} />}
-            {activeTab === 'historico' && <AdminHistoricoTab fazendaId={fazenda.id} />}
-          </div>
+          )}
         </div>
-
       </div>
     </div>
   )
