@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -44,16 +44,57 @@ export default function DashboardPage() {
   // Check for empty state: no farm data or no talhões
   const isEmpty = !fazenda || meusTalhoes.length === 0
 
+  type Alerta = {
+    tipo: 'warning' | 'danger' | 'info'
+    title: string
+    items: string[]
+    moreCount?: number
+    link?: string
+  }
+
   // Alertas dinâmicos
-  const alertas = useMemo(() => {
+  const alertas = useMemo<Alerta[]>(() => {
     if (isEmpty) return []
-    const list: { text: string; tipo: 'warning' | 'danger' | 'info' }[] = []
-    const talhoeSemSolo = meusTalhoes.find(t => !t.socPercent && t.tipo === 'projeto')
-    if (talhoeSemSolo) list.push({ text: `Dados de solo do ${talhoeSemSolo.nome} não cadastrados.`, tipo: 'warning' })
+    const list: Alerta[] = []
+
+    const talhoeSemSolo = meusTalhoes.filter(t => !t.socPercent && t.tipo === 'projeto')
+    if (talhoeSemSolo.length) {
+      list.push({
+        tipo: 'warning',
+        title: 'Dados de solo pendentes',
+        items: talhoeSemSolo.slice(0, 3).map(t => `${t.nome}: SOC não informado`),
+        moreCount: Math.max(0, talhoeSemSolo.length - 3),
+      })
+    }
+
     const semManejo = meusTalhoes.filter(t => t.tipo === 'projeto' && !manejo.some(m => m.talhaoId === t.id))
-    if (semManejo.length) list.push({ text: `${semManejo.length} talhão(ões) sem dados MRV da safra atual.`, tipo: 'danger' })
-    const correcao = manejo.find(m => m.status === 'correcao')
-    if (correcao) list.push({ text: 'Correção solicitada pelo admin. Acesse o MRV para revisar.', tipo: 'danger' })
+    if (semManejo.length) {
+      list.push({
+        tipo: 'danger',
+        title: `${semManejo.length} talhão(ões) sem dados MRV`,
+        items: semManejo.slice(0, 3).map(t => `${t.nome}: nenhum dado de manejo registrado`),
+        moreCount: Math.max(0, semManejo.length - 3),
+        link: '/dashboard/mrv',
+      })
+    }
+
+    const correcoes = manejo.filter(m => m.status === 'correcao' && meusTalhoes.some(t => t.id === m.talhaoId))
+    if (correcoes.length) {
+      const items = correcoes.map(m => {
+        const t = meusTalhoes.find(x => x.id === m.talhaoId)
+        return m.comentarioCorrecao
+          ? `${t?.nome ?? 'Talhão'}: ${m.comentarioCorrecao}`
+          : `${t?.nome ?? 'Talhão'}: revisar dados de manejo`
+      })
+      list.push({
+        tipo: 'danger',
+        title: `${correcoes.length} talhão(ões) com correção solicitada`,
+        items: items.slice(0, 3),
+        moreCount: Math.max(0, items.length - 3),
+        link: '/dashboard/mrv',
+      })
+    }
+
     return list
   }, [meusTalhoes, manejo, isEmpty])
 
@@ -148,12 +189,32 @@ export default function DashboardPage() {
       {/* Alertas */}
       {alertas.length > 0 && (
         <div className="space-y-2">
-          {alertas.map((a, i) => (
-            <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border text-sm ${a.tipo === 'danger' ? 'bg-danger/5 border-danger/20 text-danger' : 'bg-warning/5 border-warning/20 text-warning'}`}>
-              <AlertCircle size={16} className="flex-shrink-0" />
-              {a.text}
-            </div>
-          ))}
+          {alertas.map((a, i) => {
+            const isDanger = a.tipo === 'danger'
+            return (
+              <div key={i} className={`rounded-xl border text-sm overflow-hidden ${isDanger ? 'bg-danger/5 border-danger/20' : 'bg-warning/5 border-warning/20'}`}>
+                <div className={`flex items-start gap-3 p-4 border-l-4 ${isDanger ? 'border-l-danger' : 'border-l-warning'}`}>
+                  <AlertCircle size={16} className={`flex-shrink-0 mt-0.5 ${isDanger ? 'text-danger' : 'text-warning'}`} />
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className={`font-semibold ${isDanger ? 'text-danger' : 'text-warning'}`}>{a.title}</p>
+                    <ul className="space-y-0.5">
+                      {a.items.map((item, j) => (
+                        <li key={j} className={`text-xs ${isDanger ? 'text-danger/80' : 'text-warning/80'}`}>• {item}</li>
+                      ))}
+                    </ul>
+                    {(a.moreCount ?? 0) > 0 && (
+                      <p className={`text-xs ${isDanger ? 'text-danger/60' : 'text-warning/60'}`}>e mais {a.moreCount}...</p>
+                    )}
+                  </div>
+                  {a.link && (
+                    <Link to={a.link} className={`flex items-center gap-1 text-xs font-semibold shrink-0 hover:underline ${isDanger ? 'text-danger' : 'text-warning'}`}>
+                      Ver no MRV <ChevronRight size={12} />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

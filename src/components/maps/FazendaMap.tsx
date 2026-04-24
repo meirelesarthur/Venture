@@ -215,7 +215,7 @@ function MapLayers({
     }
 
     if (hasBounds) {
-      map.fitBounds(bounds, { padding: 30, duration: 1000 })
+      map.fitBounds(bounds, { padding: 60, duration: 1000, maxZoom: 18 })
     }
   }, [map, isLoaded, talhoes, controlSites, matchResults, fazendaLat, fazendaLng, fazendaId, onTalhaoClick])
 
@@ -266,7 +266,7 @@ export default function FazendaMap({
     <div style={{ height, width: '100%', borderRadius: '12px', overflow: 'hidden' }}>
       <Map
         styles={{ light: osmStyle, dark: osmStyle }}
-        viewport={{ center: [defaultLng, defaultLat], zoom: 10 }}
+        viewport={{ center: [defaultLng, defaultLat], zoom: 12 }}
         className="w-full h-full"
       >
         <MapLayers
