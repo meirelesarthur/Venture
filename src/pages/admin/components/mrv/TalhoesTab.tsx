@@ -434,7 +434,7 @@ function DadosGeraisPanel({ talhao, fazendaId }: DadosGeraisProps) {
         <div className="px-4 py-2.5 bg-surface/20 text-sm font-semibold border-b border-border/30">
           Visualização
         </div>
-        <FazendaMap talhoes={todosTalhoes} height="200px" />
+        <FazendaMap talhoes={todosTalhoes} height="200px" highlightTalhaoId={talhao.id} />
       </div>
     </div>
   )

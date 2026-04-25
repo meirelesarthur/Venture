@@ -29,12 +29,12 @@ export default function LeadsPage() {
   const [filter, setFilter] = useState<string>('todos')
 
   const FILTROS = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'novo', label: 'Novos' },
-    { id: 'em_analise', label: 'Em Análise' },
-    { id: 'aprovado', label: 'Aprovados' },
-    { id: 'contratado', label: 'Contratados' },
-    { id: 'recusado', label: 'Recusados' },
+    { id: 'todos', label: 'Todos', count: leads.length },
+    { id: 'novo', label: 'Novos', count: leads.filter(l => l.status === 'novo').length },
+    { id: 'em_analise', label: 'Em Análise', count: leads.filter(l => l.status === 'em_analise').length },
+    { id: 'aprovado', label: 'Aprovados', count: leads.filter(l => l.status === 'aprovado').length },
+    { id: 'contratado', label: 'Contratados', count: leads.filter(l => l.status === 'contratado').length },
+    { id: 'recusado', label: 'Recusados', count: leads.filter(l => l.status === 'recusado').length },
   ]
 
   const filtered = filter === 'todos' ? leads : leads.filter(l => l.status === filter)
@@ -73,9 +73,14 @@ export default function LeadsPage() {
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
-                className={`text-xs px-3 py-1 rounded-full border transition-colors ${filter === f.id ? 'bg-primary text-primary-foreground border-primary' : 'border-border/50 text-muted hover:bg-accent/5'}`}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${filter === f.id ? 'bg-primary text-primary-foreground border-primary' : 'border-border/50 text-muted hover:bg-accent/5'}`}
               >
                 {f.label}
+                {f.count > 0 && (
+                  <span className={`inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold ${filter === f.id ? 'bg-white/20 text-white' : 'bg-muted/20 text-muted-foreground'}`}>
+                    {f.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Send, MapPin, Leaf, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Send, MapPin, Leaf, Eye, EyeOff, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import { useAuthStore } from '@/store/auth'
 import { toast } from 'sonner'
@@ -36,6 +36,7 @@ export default function NovoLeadPage() {
   const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [showComissao, setShowComissao] = useState(false)
+  const [submitted, setSubmitted] = useState<{ nome: string; fazenda: string; area: number } | null>(null)
 
   const [nome, setNome]           = useState('')
   const [email, setEmail]         = useState('')
@@ -83,10 +84,46 @@ export default function NovoLeadPage() {
         parceiroId: user?.id ?? 'p1',
         status: 'em_analise',
       })
-      toast.success('Lead indicado com sucesso! Em breve nosso time analisará a indicação.')
-      navigate('/parceiro/leads')
+      setSubmitted({ nome, fazenda, area: areaNum })
       setLoading(false)
     }, 800)
+  }
+
+  if (submitted) {
+    return (
+      <div className="w-full max-w-lg mx-auto py-16 flex flex-col items-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center">
+          <CheckCircle2 size={40} className="text-success" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Indicação enviada!</h2>
+          <p className="text-muted text-sm">
+            <strong className="text-foreground">{submitted.nome}</strong> ({submitted.fazenda} · {submitted.area.toLocaleString('pt-BR')} ha) foi registrado e está em análise.
+          </p>
+        </div>
+        <div className="w-full bg-surface border border-border/50 rounded-2xl p-5 text-left space-y-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Próximos passos</p>
+          {[
+            'Nosso time analisa a elegibilidade em até 48h',
+            'Você é notificado quando o lead for aprovado',
+            'Comissão liberada após assinatura do contrato',
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</div>
+              <p className="text-sm text-muted-foreground">{step}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3 w-full">
+          <Button variant="outline" className="flex-1 rounded-xl" onClick={() => navigate('/parceiro/leads')}>
+            Ver meus leads
+          </Button>
+          <Button className="flex-1 rounded-xl gap-2" onClick={() => { setSubmitted(null); setNome(''); setEmail(''); setTelefone(''); setFazenda(''); setMunicipio(''); setEstado(''); setArea(''); setCulturas([]); setPraticas([]); setObs('') }}>
+            <Send size={14} /> Nova indicação
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (

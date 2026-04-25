@@ -4,7 +4,7 @@ import type { MrvStatus } from '@/store/data'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -227,6 +227,39 @@ function ManejoStatusDots({ lavoura, pecuaria }: { lavoura: 'complete' | 'draft'
   )
 }
 
+type YearStatus = 'aprovado' | 'pendente' | 'correcao' | 'rascunho' | 'empty'
+
+function getYearMrvStatus(
+  year: number,
+  projetoTalhoes: { id: string }[],
+  manejo: ReturnType<typeof useDataStore>['manejo']
+): YearStatus {
+  const records = projetoTalhoes
+    .map(t => manejo.find(m => m.talhaoId === t.id && m.anoAgricola === year && m.cenario === 'projeto'))
+    .filter(Boolean) as typeof manejo
+  if (records.length === 0) return 'empty'
+  if (records.some(m => m.status === 'correcao')) return 'correcao'
+  if (records.some(m => m.status === 'pendente')) return 'pendente'
+  if (records.every(m => m.status === 'aprovado')) return 'aprovado'
+  return 'rascunho'
+}
+
+const YEAR_STATUS_DOT: Record<YearStatus, string> = {
+  aprovado: 'bg-success',
+  pendente: 'bg-warning',
+  correcao: 'bg-danger',
+  rascunho: 'bg-muted-foreground/60',
+  empty:    'bg-muted-foreground/25',
+}
+
+const YEAR_STATUS_TITLE: Record<YearStatus, string> = {
+  aprovado: 'Aprovado',
+  pendente: 'Em validação',
+  correcao: 'Correção solicitada',
+  rascunho: 'Rascunho',
+  empty:    'Sem dados',
+}
+
 export default function MrvPage() {
   const { talhoes, fazendas, addTalhao, manejo, submitManejo, updateFazenda } = useDataStore()
   const projetoTalhoes = talhoes.filter(t => t.tipo === 'projeto')
@@ -375,15 +408,30 @@ export default function MrvPage() {
                 <p className="text-xs text-muted">{fazenda.municipio}/{fazenda.estado} · {fazenda.areaTotalHa.toLocaleString('pt-BR')} ha</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Select value={String(anoAgricola)} onValueChange={v => setAnoAgricola(Number(v))}>
-                <SelectTrigger className="w-36 rounded-xl h-9 text-xs font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ANOS.map(a => <SelectItem key={a} value={String(a)}>{a} {a < CURRENT_YEAR ? '🔒' : ''}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1">
+                {ANOS.map(a => {
+                  const status = getYearMrvStatus(a, projetoTalhoes, manejo)
+                  const isSelected = a === anoAgricola
+                  return (
+                    <button
+                      key={a}
+                      title={`${a}/${a + 1} · ${YEAR_STATUS_TITLE[status]}`}
+                      onClick={() => setAnoAgricola(a)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-all border',
+                        isSelected
+                          ? 'bg-primary/10 border-primary text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                      )}
+                    >
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', YEAR_STATUS_DOT[status])} />
+                      {a}
+                      {a < CURRENT_YEAR && <Lock size={9} className="opacity-60" />}
+                    </button>
+                  )
+                })}
+              </div>
               <div className="flex items-center gap-2 text-[10px] text-muted uppercase font-bold tracking-tight bg-background/50 px-3 py-1.5 rounded-lg border border-border/50">
                 <Thermometer size={12} className="text-primary" /> INMET: {fazenda.municipio}
               </div>
@@ -600,26 +648,34 @@ export default function MrvPage() {
 
               {/* Horizontal underline tabs: Lavoura | Pecuária */}
               <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
-                {[
-                  { id: 'lavoura', label: 'Lavoura', icon: Leaf },
-                  { id: 'pecuaria', label: 'Pecuária', icon: Tractor },
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    role="tab"
-                    aria-selected={manejoTab === item.id}
-                    onClick={() => setManejoTab(item.id as any)}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
-                      manejoTab === item.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                    )}
-                  >
-                    <item.icon size={14} />
-                    {item.label}
-                  </button>
-                ))}
+                {(() => {
+                  const selectedManejo = manejo.filter(m =>
+                    selectedTalhoes.includes(m.talhaoId ?? '') && m.anoAgricola === anoAgricola && m.cenario === 'projeto'
+                  )
+                  const lavouraHasData = selectedManejo.some(m => m.cultura || (m.culturas && m.culturas.length > 0) || m.dataPlantio)
+                  const pecuariaHasData = selectedManejo.some(m => m.pecuaria && m.pecuaria.length > 0)
+                  return [
+                    { id: 'lavoura',  label: 'Lavoura',  icon: Leaf,    hasData: lavouraHasData  },
+                    { id: 'pecuaria', label: 'Pecuária', icon: Tractor, hasData: pecuariaHasData },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      role="tab"
+                      aria-selected={manejoTab === item.id}
+                      onClick={() => setManejoTab(item.id as any)}
+                      className={cn(
+                        'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
+                        manejoTab === item.id
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                      )}
+                    >
+                      <item.icon size={14} />
+                      {item.label}
+                      <span className={cn('w-2 h-2 rounded-full shrink-0', item.hasData ? 'bg-success' : 'bg-muted-foreground/25')} />
+                    </button>
+                  ))
+                })()}
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">

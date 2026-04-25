@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserCircle, Save } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function PerfilPage() {
   const { user } = useAuthStore()
@@ -45,7 +46,7 @@ export default function PerfilPage() {
           </div>
           
           <div className="flex justify-end pt-4 border-t border-border/50">
-            <Button className="rounded-xl shadow-soft btn-micro bg-primary text-primary-foreground">
+            <Button className="rounded-xl shadow-soft btn-micro bg-primary text-primary-foreground" onClick={() => toast.success('Perfil atualizado com sucesso!')}>
               <Save size={16} className="mr-2" /> Salvar Alterações
             </Button>
           </div>

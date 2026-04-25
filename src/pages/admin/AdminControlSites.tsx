@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
   MapPin, Plus, AlertCircle, CheckCircle2, XCircle, Clock,
-  BarChart3, Zap, Activity, ChevronRight, Info, Map,
+  BarChart3, Zap, Activity, ChevronRight, Info, Map, Loader2,
 } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import { rodarMatching } from '@/motor/matchingControlSite'
@@ -28,15 +28,20 @@ function ScoreBar({ score }: { score: number }) {
   )
 }
 
-function AlertaCard({ nivel, texto }: { nivel: '🔴' | '🟡' | '🔵'; texto: string }) {
+function AlertaCard({ nivel, texto, ctaLabel, onCta }: { nivel: '🔴' | '🟡' | '🔵'; texto: string; ctaLabel?: string; onCta?: () => void }) {
   const cls =
     nivel === '🔴' ? 'border-danger/30 bg-danger/5 text-danger' :
     nivel === '🟡' ? 'border-warning/30 bg-warning/5 text-warning' :
     'border-primary/30 bg-primary/5 text-primary'
   return (
-    <div className={`flex items-start gap-2 px-4 py-2.5 rounded-xl border text-xs ${cls}`}>
-      <span className="text-base leading-none mt-0.5">{nivel}</span>
-      <span>{texto}</span>
+    <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs ${cls}`}>
+      <span className="text-base leading-none shrink-0">{nivel}</span>
+      <span className="flex-1">{texto}</span>
+      {ctaLabel && onCta && (
+        <button onClick={onCta} className="shrink-0 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity whitespace-nowrap">
+          {ctaLabel}
+        </button>
+      )}
     </div>
   )
 }
@@ -56,6 +61,7 @@ export default function AdminControlSites() {
   const [matchCsId, setMatchCsId] = useState('')
   const [matchFazId, setMatchFazId] = useState('')
   const [lastMatch, setLastMatch] = useState<ReturnType<typeof rodarMatching> | null>(null)
+  const [isMatching, setIsMatching] = useState(false)
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
   const ativos = controlSites.filter(s => s.status_cs === 'Ativo' || !s.status_cs)
@@ -92,14 +98,18 @@ export default function AdminControlSites() {
   }, [controlSites, fazendas, matchResults])
 
   // ── Matching manual ───────────────────────────────────────────────────────
-  const handleMatching = () => {
+  const handleMatching = useCallback(() => {
     const cs = controlSites.find(s => s.id === matchCsId)
     if (!cs || !matchFazId) { toast.error('Selecione CS e fazenda.'); return }
-    const result = rodarMatching({ cs, fazendaId: matchFazId })
-    addMatchResult(result)
-    setLastMatch(result)
-    toast.success(`Matching calculado: ${result.score}% — ${result.statusCobertura}`)
-  }
+    setIsMatching(true)
+    setTimeout(() => {
+      const result = rodarMatching({ cs, fazendaId: matchFazId })
+      addMatchResult(result)
+      setLastMatch(result)
+      toast.success(`Matching calculado: ${result.score}% — ${result.statusCobertura}`)
+      setIsMatching(false)
+    }, 900)
+  }, [controlSites, matchCsId, matchFazId, addMatchResult])
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -160,7 +170,19 @@ export default function AdminControlSites() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-2">
-                {alertas.map((a, i) => <AlertaCard key={i} nivel={a.nivel} texto={a.texto} />)}
+                {alertas.map((a, i) => {
+                  const isSemSite = a.texto.includes('Mínimo VM0042')
+                  const isMatching = a.texto.includes('Executar matching') || a.texto.includes('cobertura parcial') || a.texto.includes('sem cobertura')
+                  return (
+                    <AlertaCard
+                      key={i}
+                      nivel={a.nivel}
+                      texto={a.texto}
+                      ctaLabel={isSemSite ? 'Adicionar site' : isMatching ? 'Ir ao matching' : undefined}
+                      onCta={isSemSite ? () => navigate('/admin/control-sites/novo') : isMatching ? () => setActiveTab('matching') : undefined}
+                    />
+                  )
+                })}
               </CardContent>
             </Card>
           ) : (
@@ -336,8 +358,9 @@ export default function AdminControlSites() {
                     <SelectContent>{fazendas.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleMatching} className="gap-2 rounded-xl h-10">
-                  <Activity size={14} /> Rodar Matching
+                <Button onClick={handleMatching} disabled={isMatching} className="gap-2 rounded-xl h-10">
+                  {isMatching ? <Loader2 size={14} className="animate-spin" /> : <Activity size={14} />}
+                  {isMatching ? 'Calculando…' : 'Rodar Matching'}
                 </Button>
               </div>
             </CardContent>

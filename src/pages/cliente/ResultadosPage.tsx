@@ -170,6 +170,41 @@ export default function ResultadosPage() {
         </Card>
       </div>
 
+      {/* SOC Trend Chart */}
+      {meusTalhoes.length > 0 && (() => {
+        const avgSoc = meusTalhoes.reduce((a, t) => a + (t.socPercent ?? 1.8), 0) / meusTalhoes.length
+        const socTrendData = Array.from({ length: 10 }, (_, i) => ({
+          ano: `${2026 + i}`,
+          baseline: parseFloat(avgSoc.toFixed(2)),
+          projeto: parseFloat((avgSoc * (1 + i * 0.06)).toFixed(2)),
+        }))
+        return (
+          <Card className="border-border/50 shadow-sm">
+            <CardHeader className="border-b bg-surface/50 pb-4">
+              <CardTitle className="text-base">Tendência de SOC — Baseline vs Projeto</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={socTrendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
+                    <Tooltip formatter={(v: any, name: string) => [`${Number(v).toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
+                    <Line type="monotone" dataKey="baseline" stroke="var(--color-muted-foreground, #9CA3AF)" strokeWidth={2} strokeDasharray="5 3" dot={false} name="baseline" />
+                    <Line type="monotone" dataKey="projeto"   stroke="var(--color-success, #16A34A)"         strokeWidth={2.5} dot={{ r: 3 }}               name="projeto"   />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center gap-6 mt-3 text-xs text-muted justify-center">
+                <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-muted-foreground/50 border-dashed border-t-2 border-muted-foreground/50" /><span>Baseline (sem manejo)</span></div>
+                <div className="flex items-center gap-2"><div className="w-6 h-0.5 bg-success" /><span>Projeto</span></div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
+
       {/* Detalhes por talhão */}
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">

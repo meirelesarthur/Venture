@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDataStore } from '@/store/data'
 import { useAuthStore } from '@/store/auth'
 import { Bell, Check, CheckCheck } from 'lucide-react'
@@ -13,6 +13,13 @@ export default function NotificacoesBell() {
   const role = (user?.role ?? 'admin') as Notificacao['para']
   const minhas = notificacoes.filter(n => n.para === role)
   const naoLidas = minhas.filter(n => !n.lida).length
+
+  useEffect(() => {
+    if (open && naoLidas > 0) {
+      const t = setTimeout(() => marcarTodasLidas(role), 1500)
+      return () => clearTimeout(t)
+    }
+  }, [open, naoLidas, role, marcarTodasLidas])
 
   return (
     <div className="relative">

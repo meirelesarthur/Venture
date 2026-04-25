@@ -83,10 +83,12 @@ interface ModuloCardProps {
   corResultado?: string
   filhos: React.ReactNode
   defaultOpen?: boolean
+  forceOpen?: boolean
 }
 
-function ModuloCard({ titulo, subtitulo, resultado, corResultado = 'text-success', filhos, defaultOpen = false }: ModuloCardProps) {
+function ModuloCard({ titulo, subtitulo, resultado, corResultado = 'text-success', filhos, defaultOpen = false, forceOpen }: ModuloCardProps) {
   const [open, setOpen] = useState(defaultOpen)
+  useEffect(() => { if (forceOpen !== undefined) setOpen(forceOpen) }, [forceOpen])
   return (
     <div className="border border-border/50 rounded-xl overflow-hidden">
       <button
@@ -113,7 +115,7 @@ function ModuloCard({ titulo, subtitulo, resultado, corResultado = 'text-success
 
 // ─── Seção RothC ──────────────────────────────────────────────────────────────
 
-function SecaoRothC({ r, talhaoArea }: { r: ResultadoMotor; talhaoArea: number }) {
+function SecaoRothC({ r, talhaoArea, forceOpen }: { r: ResultadoMotor; talhaoArea: number; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as any
   if (!d) return null
   const base = d.rothcBase
@@ -128,6 +130,7 @@ function SecaoRothC({ r, talhaoArea }: { r: ResultadoMotor; talhaoArea: number }
       resultado={`CR_t = ${r.crTTco2eHa.toFixed(3)} tCO₂e/ha`}
       corResultado="text-success"
       defaultOpen
+      forceOpen={forceOpen}
       filhos={
         <>
           {/* 1. SOC Stock */}
@@ -291,7 +294,7 @@ function SecaoRothC({ r, talhaoArea }: { r: ResultadoMotor; talhaoArea: number }
 
 // ─── Seção N₂O ───────────────────────────────────────────────────────────────
 
-function SecaoN2O({ r }: { r: ResultadoMotor }) {
+function SecaoN2O({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as any
   if (!d) return null
   const proj = d.n2oProj
@@ -304,6 +307,7 @@ function SecaoN2O({ r }: { r: ResultadoMotor }) {
       subtitulo="VM0042 §8.4 · Equações 16–28"
       resultado={`ΔN₂O = ${r.deltaN2oTco2eHa.toFixed(4)} tCO₂e/ha`}
       corResultado={r.deltaN2oTco2eHa > 0 ? 'text-success' : 'text-warning'}
+      forceOpen={forceOpen}
       filhos={
         <>
           {/* Eq.16 Total */}
@@ -401,7 +405,7 @@ function SecaoN2O({ r }: { r: ResultadoMotor }) {
 
 // ─── Seção CH₄ ────────────────────────────────────────────────────────────────
 
-function SecaoCH4({ r }: { r: ResultadoMotor }) {
+function SecaoCH4({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as any
   if (!d) return null
   const proj = d.ch4Proj
@@ -413,6 +417,7 @@ function SecaoCH4({ r }: { r: ResultadoMotor }) {
       subtitulo="VM0042 §8.4 · Equações 11–14"
       resultado={`ΔCH₄ = ${r.deltaCh4Tco2eHa.toFixed(4)} tCO₂e/ha`}
       corResultado={r.deltaCh4Tco2eHa > 0 ? 'text-success' : 'text-warning'}
+      forceOpen={forceOpen}
       filhos={
         <>
           {/* Eq.11 Entérico */}
@@ -467,7 +472,7 @@ function SecaoCH4({ r }: { r: ResultadoMotor }) {
 
 // ─── Seção CO₂ ───────────────────────────────────────────────────────────────
 
-function SecaoCO2({ r }: { r: ResultadoMotor }) {
+function SecaoCO2({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as any
   if (!d) return null
   const proj = d.co2Proj
@@ -479,6 +484,7 @@ function SecaoCO2({ r }: { r: ResultadoMotor }) {
       subtitulo="VM0042 Eq.6-9 / Eq.52-53"
       resultado={`CO₂ total = ${(r.co2FfTco2eHa + r.co2LimeTco2eHa).toFixed(4)} tCO₂e/ha`}
       corResultado="text-warning"
+      forceOpen={forceOpen}
       filhos={
         <>
           {/* Eq.52 Combustíveis */}
@@ -523,7 +529,7 @@ function SecaoCO2({ r }: { r: ResultadoMotor }) {
 
 // ─── Seção Remoções Líquidas ──────────────────────────────────────────────────
 
-function SecaoCreditos({ r, talhaoArea }: { r: ResultadoMotor; talhaoArea: number }) {
+function SecaoCreditos({ r, talhaoArea, forceOpen }: { r: ResultadoMotor; talhaoArea: number; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as any
   if (!d) return null
   const cred = d.creditos
@@ -535,6 +541,7 @@ function SecaoCreditos({ r, talhaoArea }: { r: ResultadoMotor; talhaoArea: numbe
       subtitulo="VM0042 Eq.37, 40, 74 · VMD0053 · VMD0054"
       resultado={`VCUs = ${r.vcusEmitidosTotal.toFixed(1)} tCO₂e`}
       corResultado="text-success text-base font-bold"
+      forceOpen={forceOpen}
       filhos={
         <>
           {/* Eq.37 ER_t */}
@@ -736,6 +743,7 @@ export default function AdminMotor() {
   const meusTalhoes = talhoes.filter(t => t.fazendaId === fazenda?.id && t.tipo === 'projeto')
 
   const [talhaoId, setTalhaoId] = useState(meusTalhoes[0]?.id ?? '')
+  const [expandAllModulos, setExpandAllModulos] = useState<boolean | undefined>(undefined)
 
   useEffect(() => {
     const ts = talhoes.filter(t => t.fazendaId === selFazendaId && t.tipo === 'projeto')
@@ -946,6 +954,11 @@ export default function AdminMotor() {
                   Cada módulo pode ser expandido para ver as equações intermediárias passo a passo com valores reais calculados.
                 </CardDescription>
               </div>
+              <div className="flex gap-2 shrink-0">
+                <button onClick={() => setExpandAllModulos(true)} className="text-xs text-primary hover:underline">Expandir todos</button>
+                <span className="text-muted-foreground/30">|</span>
+                <button onClick={() => setExpandAllModulos(false)} className="text-xs text-muted-foreground hover:underline">Colapsar todos</button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
@@ -988,11 +1001,11 @@ export default function AdminMotor() {
 
                     {r.detalhesCalculo ? (
                       <div className="space-y-3">
-                        <SecaoRothC r={r} talhaoArea={talhaoSel?.areaHa ?? 0} />
-                        <SecaoN2O r={r} />
-                        <SecaoCH4 r={r} />
-                        <SecaoCO2 r={r} />
-                        <SecaoCreditos r={r} talhaoArea={talhaoSel?.areaHa ?? 0} />
+                        <SecaoRothC r={r} talhaoArea={talhaoSel?.areaHa ?? 0} forceOpen={expandAllModulos} />
+                        <SecaoN2O r={r} forceOpen={expandAllModulos} />
+                        <SecaoCH4 r={r} forceOpen={expandAllModulos} />
+                        <SecaoCO2 r={r} forceOpen={expandAllModulos} />
+                        <SecaoCreditos r={r} talhaoArea={talhaoSel?.areaHa ?? 0} forceOpen={expandAllModulos} />
                       </div>
                     ) : (
                       /* Fallback para resultados antigos sem detalhesCalculo */

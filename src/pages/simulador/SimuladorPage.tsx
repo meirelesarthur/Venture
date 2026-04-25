@@ -1,9 +1,45 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import FarmImage from '@/assets/farm.jpeg'
-import { FormProvider, useForm } from 'react-hook-form'
+import { FormProvider, useForm, useFormContext } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { simuladorSchema, type SimuladorData } from './schema'
 import { useDataStore } from '@/store/data'
+import { TrendingUp } from 'lucide-react'
+
+const PRATICA_FACTOR: Record<string, number> = {
+  plantio_direto: 1.8, cobertura: 1.5, rotacao: 1.2, ilpf: 2.0,
+  pastagem: 1.4, organico: 1.3, biologicos: 1.1, rotac_pasto: 1.6,
+}
+
+const SESSION_KEY = 'simulador_draft'
+
+function TickerEstimativa() {
+  const { watch } = useFormContext<SimuladorData>()
+  const { parametros } = useDataStore()
+  const area = watch('area.hectares')
+  const praticas = watch('praticas') ?? []
+  const horizonte = parseInt(watch('horizonte') || '10', 10)
+
+  const estimativa = useMemo(() => {
+    if (!area || area <= 0) return null
+    const ptax  = parametros.find(p => p.chave === 'ptax_fallback')?.valor ?? 5.65
+    const preco = parametros.find(p => p.chave === 'preco_base_usd')?.valor ?? 20
+    const vals  = praticas.map(p => PRATICA_FACTOR[p] ?? 0.5).sort((a, b) => b - a)
+    const fC    = vals.length > 0 ? vals[0] + 0.3 * vals.slice(1).reduce((s, v) => s + v, 0) : 0.3
+    const tco2e = area * Math.max(fC, 0.3)
+    const lucro = tco2e * preco * ptax * 0.85 - area * 15
+    return Math.round(lucro * horizonte)
+  }, [area, praticas, horizonte, parametros])
+
+  if (!estimativa || estimativa <= 0) return null
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-success/10 border-b border-success/20 text-success text-xs font-semibold">
+      <TrendingUp size={13} />
+      <span>Estimativa atual: <strong>{estimativa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</strong> em {horizonte} anos</span>
+    </div>
+  )
+}
 
 import { SimuladorMap } from './components/SimuladorMap'
 import { Step0BemVindo } from './components/Step0BemVindo'
@@ -17,6 +53,10 @@ import { Step6Resultado } from './components/Step6Resultado'
 // Fluxo: 0-BemVindo | 1-Localização | 2-Área (KML/mapa) | 3-Culturas | 4-Práticas | 5-Lead | 6-Resultado
 const TOTAL_STEPS = 6
 
+function getSessionDraft() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') } catch { return null }
+}
+
 export default function SimuladorPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [mapCenter, setMapCenter] = useState<[number, number]>([-15.7801, -47.9292])
@@ -26,10 +66,11 @@ export default function SimuladorPage() {
 
   const addLead = useDataStore(state => state.addLead)
 
+  const draft = getSessionDraft()
   const methods = useForm<SimuladorData>({
     // @ts-ignore
     resolver: zodResolver(simuladorSchema),
-    defaultValues: {
+    defaultValues: draft ?? {
       localizacao: { fazenda: '', estado: '', municipio: '' },
       lead: { nome: '', email: '', telefone: '' },
       horizonte: '10',
@@ -38,6 +79,13 @@ export default function SimuladorPage() {
     },
     mode: 'onChange',
   })
+
+  useEffect(() => {
+    const sub = methods.watch(values => {
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(values)) } catch {}
+    })
+    return () => sub.unsubscribe()
+  }, [methods])
 
   const nextStep = async () => {
     let fieldsToValidate: string[] = []
@@ -63,6 +111,7 @@ export default function SimuladorPage() {
         area: values.area.hectares,
         status: 'em_analise',
       })
+      try { sessionStorage.removeItem(SESSION_KEY) } catch {}
     }
 
     setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS))
@@ -128,6 +177,7 @@ export default function SimuladorPage() {
             }
           `}
         >
+          {currentStep >= 2 && currentStep < 6 && <TickerEstimativa />}
           <div className="flex-1 overflow-auto custom-scrollbar flex flex-col pt-0 pb-0">
             {currentStep === 0 && <Step0BemVindo onNext={nextStep} />}
             {currentStep === 1 && <Step1Localizacao onNext={nextStep} onLocationSelect={handleLocationSelect} />}

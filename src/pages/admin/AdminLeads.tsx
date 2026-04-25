@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { CheckCircle2, Search, XCircle, Clock, UserCheck, Users } from 'lucide-react'
+import { CheckCircle2, Search, XCircle, Clock, UserCheck, Users, AlertTriangle } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import type { LeadStatus } from '@/store/data'
 import { toast } from 'sonner'
@@ -30,8 +30,9 @@ export default function AdminLeads() {
   const { leads, updateLeadStatus, convertLeadToCliente, parceiros } = useDataStore()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('todos')
-  const [showMotivo, setShowMotivo] = useState<string | null>(null)
+  const [recusaModal, setRecusaModal] = useState<{ id: string; nome: string } | null>(null)
   const [motivo, setMotivo] = useState('')
+  const [confirmAprovar, setConfirmAprovar] = useState<{ id: string; nome: string } | null>(null)
 
   const filtered = leads.filter(l => {
     const q = search.toLowerCase()
@@ -42,11 +43,19 @@ export default function AdminLeads() {
 
   const getParceiro = (id?: string) => parceiros.find(p => p.id === id)?.nome ?? '—'
 
-  const handleRecusar = (id: string) => {
+  const handleRecusar = () => {
+    if (!recusaModal) return
     if (!motivo.trim()) { toast.error('Informe o motivo da recusa.'); return }
-    updateLeadStatus(id, 'recusado', motivo)
+    updateLeadStatus(recusaModal.id, 'recusado', motivo)
     toast.success('Lead recusado.')
-    setShowMotivo(null); setMotivo('')
+    setRecusaModal(null); setMotivo('')
+  }
+
+  const handleAprovar = () => {
+    if (!confirmAprovar) return
+    updateLeadStatus(confirmAprovar.id, 'aprovado')
+    toast.success('Lead aprovado!')
+    setConfirmAprovar(null)
   }
 
   const STATUS_FILTROS: { id: string; label: string }[] = [
@@ -137,25 +146,15 @@ export default function AdminLeads() {
                   <TableCell className="text-right">
                     {lead.status === 'em_analise' || lead.status === 'novo' ? (
                       <div className="flex items-center justify-end gap-2">
-                        {showMotivo === lead.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input placeholder="Motivo..." value={motivo} onChange={e => setMotivo(e.target.value)} className="h-8 w-40 rounded-lg text-xs" />
-                            <Button variant="destructive" size="sm" className="h-8 text-xs rounded-lg" onClick={() => handleRecusar(lead.id)}>Confirmar</Button>
-                            <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg" onClick={() => { setShowMotivo(null); setMotivo('') }}>✕</Button>
-                          </div>
-                        ) : (
-                          <>
-                            <Button variant="ghost" size="icon" className="text-danger hover:bg-danger/10 h-8 w-8" onClick={() => setShowMotivo(lead.id)} title="Recusar">
-                              <XCircle size={16} />
-                            </Button>
-                            <Button variant="outline" size="sm" className="text-primary border-primary/30 hover:bg-primary/5 h-8 text-xs rounded-lg" onClick={() => { updateLeadStatus(lead.id, 'aprovado'); toast.success('Lead aprovado!') }}>
-                              Aprovar
-                            </Button>
-                            <Button size="sm" className="bg-success hover:bg-success/90 text-white h-8 text-xs rounded-lg" onClick={() => { convertLeadToCliente(lead.id); toast.success('Lead convertido em cliente!') }}>
-                              <CheckCircle2 size={13} className="mr-1" /> Efetivar
-                            </Button>
-                          </>
-                        )}
+                        <Button variant="ghost" size="icon" className="text-danger hover:bg-danger/10 h-8 w-8" onClick={() => setRecusaModal({ id: lead.id, nome: lead.nome })} title="Recusar">
+                          <XCircle size={16} />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-primary border-primary/30 hover:bg-primary/5 h-8 text-xs rounded-lg" onClick={() => setConfirmAprovar({ id: lead.id, nome: lead.nome })}>
+                          Aprovar
+                        </Button>
+                        <Button size="sm" className="bg-success hover:bg-success/90 text-white h-8 text-xs rounded-lg" onClick={() => { convertLeadToCliente(lead.id); toast.success('Lead convertido em cliente!') }}>
+                          <CheckCircle2 size={13} className="mr-1" /> Efetivar
+                        </Button>
                       </div>
                     ) : (
                       <span className="text-xs text-muted-foreground">Encerrado</span>
@@ -172,6 +171,60 @@ export default function AdminLeads() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal: Recusa */}
+      {recusaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-background rounded-2xl shadow-xl border border-border/50 w-full max-w-sm mx-4 p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
+                <XCircle size={20} className="text-danger" />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">Recusar Lead</h3>
+                <p className="text-xs text-muted">{recusaModal.nome}</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Motivo da recusa *</label>
+              <Input
+                autoFocus
+                placeholder="Ex: área insuficiente, documentação pendente..."
+                value={motivo}
+                onChange={e => setMotivo(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRecusar() }}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" className="rounded-xl" onClick={() => { setRecusaModal(null); setMotivo('') }}>Cancelar</Button>
+              <Button variant="destructive" className="rounded-xl" onClick={handleRecusar}>Confirmar recusa</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Aprovar confirmação */}
+      {confirmAprovar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-background rounded-2xl shadow-xl border border-border/50 w-full max-w-sm mx-4 p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={20} className="text-success" />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">Aprovar Lead</h3>
+                <p className="text-xs text-muted">{confirmAprovar.nome}</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">Confirma a aprovação deste lead? O produtor será notificado para prosseguir com o cadastro.</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" className="rounded-xl" onClick={() => setConfirmAprovar(null)}>Cancelar</Button>
+              <Button className="rounded-xl bg-success hover:bg-success/90 text-white" onClick={handleAprovar}>Confirmar aprovação</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

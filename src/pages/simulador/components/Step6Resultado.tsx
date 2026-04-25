@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import type { SimuladorData } from '../schema'
-import { CheckCircle2, TrendingUp, MessageCircle, ArrowRight, Leaf, Star } from 'lucide-react'
+import { CheckCircle2, TrendingUp, MessageCircle, ArrowRight, Leaf, Star, Share2 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useDataStore } from '@/store/data'
 
@@ -195,6 +195,25 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
             <MessageCircle size={14} /> Falar com Consultor
           </Button>
         </a>
+
+        <button
+          type="button"
+          onClick={() => {
+            const url = window.location.origin + '/simulacao'
+            navigator.clipboard.writeText(
+              `🌿 Simulei meu potencial de carbono na Venture Carbon!\n` +
+              `Área: ${data.area?.hectares} ha · Estimativa: ${fmt(receitaTotal)} em ${data.horizonte} anos\n` +
+              `Simule também: ${url}`
+            ).then(() => {
+              const btn = document.getElementById('share-btn-text')
+              if (btn) { btn.textContent = 'Link copiado!'; setTimeout(() => { btn.textContent = 'Compartilhar resultado' }, 2000) }
+            })
+          }}
+          className="w-full h-8 rounded-xl text-xs text-muted-foreground flex items-center justify-center gap-1.5 hover:text-foreground transition-colors"
+        >
+          <Share2 size={12} />
+          <span id="share-btn-text">Compartilhar resultado</span>
+        </button>
 
         <Button type="button" variant="ghost" onClick={onPrev} className="w-full h-8 rounded-xl text-xs text-muted-foreground">
           Voltar e editar

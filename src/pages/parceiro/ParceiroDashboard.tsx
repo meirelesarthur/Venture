@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
 import { useAuthStore } from '@/store/auth'
-import { Users, Map, DollarSign, Trophy, TrendingUp, ArrowRight, Eye, EyeOff, HelpCircle, Star } from 'lucide-react'
+import { Users, Map, DollarSign, Trophy, TrendingUp, ArrowRight, Eye, EyeOff, HelpCircle, Star, Send } from 'lucide-react'
 
 export default function ParceiroDashboard() {
   const { leads, comissoes, parceiros } = useDataStore()
@@ -44,6 +44,38 @@ export default function ParceiroDashboard() {
   const formatValue = (n: number) => {
     if (!showValues) return 'R$ ••••••'
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+
+  if (meusLeads.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+          <Send size={36} className="text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">Comece sua carteira!</h2>
+          <p className="text-muted max-w-sm text-sm">
+            Você ainda não indicou nenhum produtor. Indique agora e comece a gerar comissões com cada ha inscrito no programa.
+          </p>
+        </div>
+        <div className="bg-surface border border-border/50 rounded-2xl p-5 text-left space-y-3 max-w-sm w-full">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Como funciona</p>
+          {[
+            'Indique produtores com área mínima de 100 ha',
+            'Receba R$ 5,65/ha na assinatura do contrato',
+            'Bônus a cada 2 anos conforme créditos emitidos',
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">{i + 1}</div>
+              <p className="text-sm text-muted-foreground">{step}</p>
+            </div>
+          ))}
+        </div>
+        <Button asChild className="gap-2 rounded-xl px-8 h-12 shadow-lg">
+          <Link to="/parceiro/leads/novo"><Users size={16} /> Indicar Primeiro Produtor</Link>
+        </Button>
+      </div>
+    )
   }
 
   return (

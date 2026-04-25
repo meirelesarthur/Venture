@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo } from 'react'
+import { type ReactNode, useState, useMemo, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
@@ -63,6 +63,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const touchStartX = useRef(0)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -165,7 +166,15 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* ── Main area ───────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div
+        className="flex flex-1 flex-col overflow-hidden"
+        onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+        onTouchEnd={e => {
+          const dx = e.changedTouches[0].clientX - touchStartX.current
+          if (dx > 60 && !sidebarOpen) setSidebarOpen(true)
+          if (dx < -60 && sidebarOpen) setSidebarOpen(false)
+        }}
+      >
         {/* Topbar only for Cliente */}
         {role === 'cliente' ? (
           <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 bg-surface pl-6 pr-4 sm:pr-8 shadow-md border-x border-b border-border/40 mx-4 sm:mx-8 lg:mx-10 rounded-b-3xl transition-all duration-300">

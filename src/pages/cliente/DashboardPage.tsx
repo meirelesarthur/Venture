@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight, Zap } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const { user } = useAuthStore()
   const { clientes, talhoes, manejo, fazendas } = useDataStore()
   const navigate = useNavigate()
+  const [hoveredTalhaoId, setHoveredTalhaoId] = useState<string | null>(null)
 
   const userClient = clientes.find(c => c.userId === user?.id) ?? clientes[0]
   const fazenda = fazendas.find(f => f.produtorId === userClient?.id) ?? fazendas[0]
@@ -96,6 +97,54 @@ export default function DashboardPage() {
     }
 
     return list
+  }, [meusTalhoes, manejo, isEmpty])
+
+  const nextAction = useMemo(() => {
+    if (isEmpty) return null
+    const projetoTalhoes = meusTalhoes.filter(t => t.tipo === 'projeto')
+    const meuManejo = manejo.filter(m => projetoTalhoes.some(t => t.id === m.talhaoId))
+
+    const comCorrecao = meuManejo.filter(m => m.status === 'correcao')
+    if (comCorrecao.length > 0) return {
+      icon: AlertCircle, color: 'text-danger', bg: 'bg-danger/5 border-danger/20',
+      label: `${comCorrecao.length} talhão(ões) precisam de correção`,
+      desc: 'O time solicitou ajustes nos dados de manejo.',
+      link: '/dashboard/mrv', cta: 'Corrigir agora →',
+    }
+
+    const semManejo = projetoTalhoes.filter(t => !meuManejo.some(m => m.talhaoId === t.id))
+    if (semManejo.length > 0) return {
+      icon: ClipboardList, color: 'text-primary', bg: 'bg-primary/5 border-primary/20',
+      label: `Preencher manejo de ${semManejo.length} talhão(ões)`,
+      desc: `${semManejo.map(t => t.nome).slice(0, 2).join(', ')}${semManejo.length > 2 ? ` e mais ${semManejo.length - 2}` : ''} sem dados registrados.`,
+      link: '/dashboard/mrv', cta: 'Ir para MRV →',
+    }
+
+    const emRascunho = meuManejo.filter(m => m.status === 'rascunho')
+    if (emRascunho.length > 0) return {
+      icon: ArrowRight, color: 'text-warning', bg: 'bg-warning/5 border-warning/20',
+      label: `${emRascunho.length} talhão(ões) com rascunho pendente`,
+      desc: 'Revise e submeta para validação.',
+      link: '/dashboard/mrv', cta: 'Submeter manejo →',
+    }
+
+    const emPendente = meuManejo.filter(m => m.status === 'pendente')
+    if (emPendente.length > 0) return {
+      icon: FlaskConical, color: 'text-muted-foreground', bg: 'bg-muted/5 border-border',
+      label: 'Manejo em validação',
+      desc: 'O time Venture Carbon está revisando seus dados.',
+      link: '/dashboard/mrv', cta: 'Acompanhar →',
+    }
+
+    const todosAprovados = projetoTalhoes.length > 0 && projetoTalhoes.every(t => meuManejo.some(m => m.talhaoId === t.id && m.status === 'aprovado'))
+    if (todosAprovados) return {
+      icon: CheckCircle2, color: 'text-success', bg: 'bg-success/5 border-success/20',
+      label: 'Tudo aprovado! Veja seus resultados',
+      desc: 'Créditos calculados e disponíveis para visualização.',
+      link: '/dashboard/resultados', cta: 'Ver resultados →',
+    }
+
+    return null
   }, [meusTalhoes, manejo, isEmpty])
 
   // Dados gráfico de projeção
@@ -185,6 +234,28 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* O que fazer agora */}
+      {nextAction && (() => {
+        const { icon: Icon, color, bg, label, desc, link, cta } = nextAction
+        return (
+          <div className={`rounded-xl border ${bg} p-4 flex items-center gap-4`}>
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+              <Icon size={20} className={color} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-bold ${color}`}>{label}</p>
+              <p className="text-xs text-muted mt-0.5 truncate">{desc}</p>
+            </div>
+            <button
+              onClick={() => navigate(link)}
+              className={`shrink-0 text-xs font-semibold ${color} hover:underline flex items-center gap-1`}
+            >
+              {cta}
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Alertas */}
       {alertas.length > 0 && (
@@ -284,6 +355,7 @@ export default function DashboardPage() {
           <FazendaMap
             talhoes={meusTalhoes}
             height="360px"
+            highlightTalhaoId={hoveredTalhaoId ?? undefined}
             onTalhaoClick={(talhaoId: string) => navigate('/dashboard/mrv', { state: { talhaoId } })}
           />
         </CardContent>
@@ -301,7 +373,12 @@ export default function DashboardPage() {
                 const m = manejo.find(mx => mx.talhaoId === t.id)
                 const tipoColor = t.tipo === 'projeto' ? 'bg-success/10 text-success border-success/20' : t.tipo === 'control_site' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/20 text-muted-foreground border-border/50'
                 return (
-                  <div key={t.id} className="flex items-center justify-between px-5 py-3">
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/5 cursor-default"
+                    onMouseEnter={() => setHoveredTalhaoId(t.id)}
+                    onMouseLeave={() => setHoveredTalhaoId(null)}
+                  >
                     <div>
                       <p className="text-sm font-medium text-foreground">{t.nome}</p>
                       <p className="text-xs text-muted">{t.areaHa} ha {t.socPercent ? `| SOC ${t.socPercent}%` : '| Solo: sem dados'}</p>

@@ -34,15 +34,16 @@ function gerarPoligonoMock(lat: number, lng: number, areaHa: number, tipo: strin
   ]
 }
 
-function MapLayers({ 
-  talhoes, 
-  controlSites, 
-  matchResults, 
-  fazendaLat, 
-  fazendaLng, 
-  fazendaNome, 
+function MapLayers({
+  talhoes,
+  controlSites,
+  matchResults,
+  fazendaLat,
+  fazendaLng,
+  fazendaNome,
   fazendaId,
-  onTalhaoClick 
+  onTalhaoClick,
+  highlightTalhaoId,
 }: any) {
   const { map, isLoaded } = useMap()
   const markersRef = useRef<maplibregl.Marker[]>([])
@@ -90,7 +91,7 @@ function MapLayers({
       features.push({
         type: 'Feature',
         geometry: { type: 'Polygon', coordinates: [coords] },
-        properties: { id: talhao.id, color: cor, description: desc }
+        properties: { id: talhao.id, color: cor, description: desc, highlighted: talhao.id === highlightTalhaoId ? 1 : 0 }
       })
     }
 
@@ -107,17 +108,17 @@ function MapLayers({
         source: sourceId,
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.3
+          'fill-opacity': ['case', ['==', ['get', 'highlighted'], 1], 0.55, 0.25]
         }
       })
-      
+
       map.addLayer({
         id: 'talhoes-line',
         type: 'line',
         source: sourceId,
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 2
+          'line-width': ['case', ['==', ['get', 'highlighted'], 1], 3.5, 2]
         }
       })
 
@@ -217,7 +218,7 @@ function MapLayers({
     if (hasBounds) {
       map.fitBounds(bounds, { padding: 60, duration: 1000, maxZoom: 18 })
     }
-  }, [map, isLoaded, talhoes, controlSites, matchResults, fazendaLat, fazendaLng, fazendaId, onTalhaoClick])
+  }, [map, isLoaded, talhoes, controlSites, matchResults, fazendaLat, fazendaLng, fazendaId, onTalhaoClick, highlightTalhaoId])
 
   return null
 }
@@ -235,7 +236,8 @@ export default function FazendaMap({
   fazendaLng,
   fazendaNome,
   fazendaId,
-}: FazendaMapProps) {
+  highlightTalhaoId,
+}: FazendaMapProps & { highlightTalhaoId?: string }) {
   // Centro default
   const defaultLat = centerLat ?? talhoes.find(t => t.latCenter)?.latCenter ?? -12.55
   const defaultLng = centerLng ?? talhoes.find(t => t.lngCenter)?.lngCenter ?? -55.72
@@ -278,6 +280,7 @@ export default function FazendaMap({
           fazendaNome={fazendaNome}
           fazendaId={fazendaId}
           onTalhaoClick={onTalhaoClick}
+          highlightTalhaoId={highlightTalhaoId}
         />
       </Map>
     </div>

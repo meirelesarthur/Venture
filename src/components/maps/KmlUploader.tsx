@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import area from '@turf/area'
-import { Upload, FileCheck, AlertCircle } from 'lucide-react'
+import { Upload, FileCheck, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface KmlUploaderProps {
@@ -70,10 +70,11 @@ function parseKml(kmlText: string): { coordinates: number[][][]; areaHa: number 
 export default function KmlUploader({ onLoad, label = 'Carregar KML da propriedade' }: KmlUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [info, setInfo] = useState<{ fileName: string; areaHa: number } | null>(null)
 
   const processFile = (file: File) => {
+    setStatus('loading')
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = e.target?.result as string
@@ -99,7 +100,6 @@ export default function KmlUploader({ onLoad, label = 'Carregar KML da proprieda
 
   const handleFile = (files: FileList | null) => {
     if (!files || files.length === 0) return
-    setStatus('idle')
     processFile(files[0])
   }
 
@@ -128,6 +128,14 @@ export default function KmlUploader({ onLoad, label = 'Carregar KML da proprieda
           <Upload size={28} className="mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground">{label}</p>
           <p className="text-xs text-muted mt-1">Arraste e solte ou clique · Formatos: .kml, .kmz</p>
+        </>
+      )}
+
+      {status === 'loading' && (
+        <>
+          <Loader2 size={28} className="mx-auto mb-2 text-primary animate-spin" />
+          <p className="text-sm font-medium text-foreground">Processando arquivo…</p>
+          <p className="text-xs text-muted mt-1">Calculando área via turf.js</p>
         </>
       )}
 
