@@ -3,9 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight, Zap } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight, Zap, ExternalLink } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -368,35 +374,94 @@ export default function DashboardPage() {
             <CardTitle className="text-lg flex items-center gap-2"><Leaf className="text-primary" /> Talhões do Projeto</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
+            <TooltipProvider delayDuration={300}>
             <div className="divide-y divide-border/50">
               {meusTalhoes.map(t => {
                 const m = manejo.find(mx => mx.talhaoId === t.id)
                 const tipoColor = t.tipo === 'projeto' ? 'bg-success/10 text-success border-success/20' : t.tipo === 'control_site' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/20 text-muted-foreground border-border/50'
+                const tipoLabel = t.tipo === 'projeto' ? 'Projeto' : t.tipo === 'control_site' ? 'Controle' : 'Excluído'
+
+                const statusBadge = !m ? null : m.status === 'aprovado'
+                  ? { label: '✓ Aprovado', cls: 'bg-success/10 text-success border-success/20' }
+                  : m.status === 'pendente'
+                  ? { label: '⏳ Revisão', cls: 'bg-warning/10 text-warning border-warning/20' }
+                  : m.status === 'correcao'
+                  ? { label: '⚠ Correção', cls: 'bg-danger/10 text-danger border-danger/20' }
+                  : null
+
                 return (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/5 cursor-default"
-                    onMouseEnter={() => setHoveredTalhaoId(t.id)}
-                    onMouseLeave={() => setHoveredTalhaoId(null)}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{t.nome}</p>
-                      <p className="text-xs text-muted">{t.areaHa} ha {t.socPercent ? `| SOC ${t.socPercent}%` : '| Solo: sem dados'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={`text-xs shadow-none ${tipoColor}`}>
-                        {t.tipo === 'projeto' ? 'Projeto' : t.tipo === 'control_site' ? 'Controle' : 'Excluído'}
-                      </Badge>
-                      {m && m.status !== 'rascunho' && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${m.status === 'aprovado' ? 'bg-success/10 text-success border-success/20' : m.status === 'pendente' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-danger/10 text-danger border-danger/20'}`}>
-                          {m.status === 'aprovado' ? '✓ Aprovado' : m.status === 'pendente' ? '⏳ Revisão' : '⚠ Correção'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <UITooltip key={t.id}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/5 cursor-pointer group"
+                        onMouseEnter={() => setHoveredTalhaoId(t.id)}
+                        onMouseLeave={() => setHoveredTalhaoId(null)}
+                        onClick={() => navigate('/dashboard/mrv', { state: { talhaoId: t.id } })}
+                        role="button"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                            {t.nome}
+                            <ExternalLink size={11} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                          </p>
+                          <p className="text-xs text-muted">{t.areaHa} ha {t.socPercent ? `| SOC ${t.socPercent}%` : '| Solo: sem dados'}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={`text-xs shadow-none ${tipoColor}`}>{tipoLabel}</Badge>
+                          {statusBadge && m?.status !== 'rascunho' && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${statusBadge.cls}`}>
+                              {statusBadge.label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </TooltipTrigger>
+
+                    <TooltipContent
+                      side="left"
+                      sideOffset={8}
+                      className="w-56 p-0 bg-background border border-border/60 shadow-xl rounded-xl text-foreground"
+                    >
+                      {/* Card header */}
+                      <div className="px-4 py-3 border-b border-border/50 bg-surface/50 rounded-t-xl">
+                        <p className="text-sm font-bold text-foreground">{t.nome}</p>
+                        <Badge variant="outline" className={`text-[10px] shadow-none mt-1 ${tipoColor}`}>{tipoLabel}</Badge>
+                      </div>
+                      {/* Card body */}
+                      <div className="px-4 py-3 space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted">Área</span>
+                          <span className="font-semibold">{t.areaHa.toLocaleString('pt-BR')} ha</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted">SOC</span>
+                          <span className="font-semibold">{t.socPercent ? `${t.socPercent}%` : '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted">Manejo</span>
+                          <span className={`font-semibold ${statusBadge ? (m?.status === 'aprovado' ? 'text-success' : m?.status === 'correcao' ? 'text-danger' : 'text-warning') : 'text-muted-foreground'}`}>
+                            {statusBadge ? statusBadge.label : m ? 'Rascunho' : 'Sem dados'}
+                          </span>
+                        </div>
+                        {t.dadosValidados && (
+                          <div className="flex justify-between">
+                            <span className="text-muted">Validação</span>
+                            <span className="font-semibold text-success">✓ Validado</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* CTA */}
+                      <div className="px-4 py-2.5 border-t border-border/50 bg-primary/3 rounded-b-xl">
+                        <p className="text-[10px] text-primary font-semibold flex items-center gap-1">
+                          <ExternalLink size={10} /> Clique para abrir no MRV
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </UITooltip>
                 )
               })}
             </div>
+            </TooltipProvider>
             <div className="p-4 border-t">
               <Button size="sm" variant="outline" asChild className="rounded-xl gap-2">
                 <Link to="/dashboard/mrv"><MapPin size={14} /> Gerenciar MRV</Link>
@@ -448,7 +513,7 @@ export default function DashboardPage() {
                 <YAxis axisLine={false} tickLine={false} fontSize={12} tickFormatter={v => `${v.toLocaleString('pt-BR')}`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)' }}
-                  formatter={(v: any) => [`${v.toLocaleString('pt-BR')} VCUs`, 'Créditos']}
+                  formatter={(v: number) => [`${v.toLocaleString('pt-BR')} VCUs`, 'Créditos']}
                 />
                 <Area type="monotone" dataKey="vcus" stroke="var(--color-primary)" strokeWidth={2.5} fill="url(#colorVcus)" dot={{ r: 4, fill: 'var(--color-primary)' }} />
               </AreaChart>

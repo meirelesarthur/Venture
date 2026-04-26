@@ -7,27 +7,7 @@ import type { SimuladorData } from '../schema'
 import { CheckCircle2, TrendingUp, MessageCircle, ArrowRight, Leaf, Star, Share2 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { useDataStore } from '@/store/data'
-
-const BUFFER_POOL = 0.15
-
-// Mapa de práticas → parâmetro do store
-const PRATICA_PARAM: Record<string, string> = {
-  plantio_direto: 'soc_fator_spdpd',
-  cobertura:      'soc_fator_cobertura',
-  rotacao:        'soc_fator_rotacao',
-  ilpf:           'soc_fator_ilpf',
-  pastagem:       'soc_fator_pastagem',
-  organico:       'soc_fator_org',
-  biologicos:     'soc_fator_biologicos',
-  rotac_pasto:    'soc_fator_rotac_past',
-}
-
-// Adicional por cultura/manejo no step de culturas
-const CULTURA_BONUS: Record<string, number> = {
-  plantio_direto: 2.5,
-  reduzido: 1.0,
-  convencional: 0,
-}
+import { PRATICA_PARAM, CULTURA_BONUS, BUFFER_POOL } from '@/constants/simulador'
 
 export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
   const { watch } = useFormContext<SimuladorData>()
@@ -141,7 +121,7 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
               <Tooltip
                 cursor={{ fill: 'var(--color-accent)', opacity: 0.05 }}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)', fontSize: '11px', padding: '6px' }}
-                formatter={(val: any) => [fmt(val), 'Acumulado']}
+                formatter={(val: number) => [fmt(val), 'Acumulado']}
                 labelStyle={{ fontWeight: 'bold', color: 'var(--color-foreground)' }}
               />
               <Area type="stepAfter" dataKey="lucroAcumulado" stroke="var(--color-success)" strokeWidth={2} fill="url(#colorLucro)"

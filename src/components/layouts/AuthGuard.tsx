@@ -15,7 +15,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (allowedRoles && user?.role && !allowedRoles.includes(user.role as any)) {
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role as 'cliente' | 'parceiro' | 'admin')) {
     // Redireciona para o dashboard correto baseado no perfil se tentar acessar área não permitida
     if (user.role === 'admin') return <Navigate to="/admin" replace />
     if (user.role === 'parceiro') return <Navigate to="/parceiro" replace />

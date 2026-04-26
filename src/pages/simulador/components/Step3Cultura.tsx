@@ -62,7 +62,7 @@ export function Step3Cultura({ onNext, onPrev }: { onNext: () => void; onPrev: (
                     <Label className="text-xs">Preparo do Solo Atual</Label>
                     <Select
                       value={field.tipo_preparo}
-                      onValueChange={(val: any) => update(index, { ...field, tipo_preparo: val })}
+                      onValueChange={(val) => update(index, { ...field, tipo_preparo: val as 'convencional' | 'reduzido' | 'direto' })}
                     >
                       <SelectTrigger className="bg-surface h-9 text-xs rounded-lg">
                         <SelectValue />

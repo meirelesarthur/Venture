@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useDataStore } from '@/store/data'
-import type { MrvStatus } from '@/store/data'
+import type { FeatureCollection } from 'geojson'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-
+import { MrvStatusBadge } from '@/components/ui/mrv-status-badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -21,244 +19,20 @@ import FazendaMap from '@/components/maps/FazendaMap'
 import { MapDemarcationOverlay } from '@/components/MapDemarcationOverlay'
 import {
   Leaf, Droplets, Tractor, FileText,
-  Clock, AlertCircle, Lock, Send, MapPin, Thermometer,
-  X, PlusCircle, Grid, Settings2, Map, ChevronRight,
-  CheckCircle2, Layers, Check, MoreVertical, Trash2,
+  Lock, Send, MapPin, Thermometer,
+  PlusCircle, Settings2, Map, ChevronRight,
+  Check, MoreVertical, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TalhaoEditModal, DeleteTalhaoModal, SubmitConfirmModal } from './mrv/MrvModals'
+import {
+  StepIndicator, getManejoStatus, getManejoProgress,
+  PROGRESS_DOT, PROGRESS_TOOLTIP, ManejoStatusDots,
+  getYearMrvStatus, YEAR_STATUS_DOT, YEAR_STATUS_TITLE,
+} from './mrv/MrvIndicators'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const ANOS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3]
-
-function StatusBadge({ status }: { status: MrvStatus }) {
-  if (status === 'rascunho') return null
-  const cfg = {
-    pendente: { label: 'Em Validação', cls: 'bg-warning/10 text-warning border-warning/20' },
-    aprovado: { label: 'Aprovado', cls: 'bg-success/10 text-success border-success/20' },
-    correcao: { label: 'Correção', cls: 'bg-danger/10 text-danger border-danger/20' },
-  }[status as Exclude<MrvStatus, 'rascunho'>]
-  const icons = { pendente: <Clock size={11} />, aprovado: <Lock size={11} />, correcao: <AlertCircle size={11} /> }
-  return (
-    <Badge variant="outline" className={cn('flex items-center gap-1 text-xs shadow-none', cfg.cls)}>
-      {icons[status as keyof typeof icons]}
-      {cfg.label}
-    </Badge>
-  )
-}
-
-function TalhaoEditModal({ talhaoId, onClose }: { talhaoId: string; onClose: () => void }) {
-  const { talhoes, updateTalhao } = useDataStore()
-  const talhao = talhoes.find(t => t.id === talhaoId)
-  const [nome, setNome] = useState(talhao?.nome || '')
-  const [area, setArea] = useState(String(talhao?.areaHa || ''))
-  const [soc, setSoc] = useState(String(talhao?.socPercent || ''))
-  if (!talhao) return null
-  const handleSave = () => {
-    updateTalhao(talhaoId, { nome, areaHa: Number(area), socPercent: soc ? Number(soc) : undefined })
-    toast.success('Talhão atualizado!')
-    onClose()
-  }
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-background border border-border/50 rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2"><Settings2 size={18} className="text-primary" /> Editar Talhão</h2>
-          <button onClick={onClose} className="p-2 text-muted hover:text-foreground"><X size={20} /></button>
-        </div>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Nome do Talhão</Label>
-            <Input value={nome} onChange={e => setNome(e.target.value)} className="rounded-xl" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Área (ha)</Label><Input type="number" value={area} onChange={e => setArea(e.target.value)} className="rounded-xl" /></div>
-            <div className="space-y-1.5"><Label>SOC (%)</Label><Input type="number" step="0.1" value={soc} onChange={e => setSoc(e.target.value)} className="rounded-xl" placeholder="Ex: 2.1" /></div>
-          </div>
-        </div>
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl">Cancelar</Button>
-          <Button onClick={handleSave} className="flex-1 rounded-xl">Salvar</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DeleteTalhaoModal({ talhaoId, onClose }: { talhaoId: string; onClose: () => void }) {
-  const { talhoes, updateTalhao } = useDataStore()
-  const talhao = talhoes.find(t => t.id === talhaoId)
-  if (!talhao) return null
-  const handleDelete = () => {
-    updateTalhao(talhaoId, { tipo: 'excluido' })
-    toast.success(`${talhao.nome} removido.`)
-    onClose()
-  }
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-background border border-border/50 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-danger/10 flex items-center justify-center shrink-0">
-            <Trash2 size={18} className="text-danger" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold">Remover talhão?</h2>
-            <p className="text-sm text-muted mt-0.5">
-              <strong className="text-foreground">{talhao.nome}</strong> será marcado como excluído. Esta ação pode ser revertida pelo administrador.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl">Cancelar</Button>
-          <Button variant="destructive" onClick={handleDelete} className="flex-1 rounded-xl">Remover</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SubmitConfirmModal({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-background border border-border/50 rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Send size={18} className="text-primary" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold">Submeter manejo?</h2>
-            <p className="text-sm text-muted mt-0.5">
-              Os dados serão enviados para validação pelo time Venture Carbon. Após a submissão, não será possível editar.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl">Cancelar</Button>
-          <Button onClick={() => { onConfirm(); onClose() }} className="flex-1 rounded-xl gap-2">
-            <Send size={14} /> Submeter
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StepIndicator({ current, onGoTo }: { current: number; onGoTo: (n: number) => void }) {
-  const steps = [
-    { n: 1, label: 'Área da Fazenda', icon: Map },
-    { n: 2, label: 'Talhões', icon: Layers },
-    { n: 3, label: 'Manejo', icon: Leaf },
-  ]
-  return (
-    <div className="flex items-center gap-0 px-6 py-4 border-b border-border/50 bg-surface/20">
-      {steps.map((s, i) => {
-        const done = current > s.n
-        const active = current === s.n
-        const clickable = done || active
-        return (
-          <div key={s.n} className="flex items-center gap-0 flex-1">
-            <div
-              className={cn('flex items-center gap-2 flex-1', active ? 'opacity-100' : done ? 'opacity-70' : 'opacity-40', clickable && 'cursor-pointer group')}
-              onClick={() => clickable && onGoTo(s.n)}
-            >
-              <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors',
-                active ? 'bg-primary text-primary-foreground' : done ? 'bg-success text-white' : 'bg-border text-muted-foreground')}>
-                {done ? <CheckCircle2 size={14} /> : s.n}
-              </div>
-              <span className={cn('text-xs font-medium hidden sm:block transition-colors', active ? 'text-foreground' : 'text-muted', done && 'group-hover:underline group-hover:text-foreground')}>{s.label}</span>
-            </div>
-            {i < steps.length - 1 && <ChevronRight size={14} className="text-muted mx-1 shrink-0" />}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function getManejoStatus(talhaoId: string, manejo: ReturnType<typeof useDataStore>['manejo'], anoAgricola: number) {
-  const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-  if (!m) return { lavoura: 'empty' as const, pecuaria: 'empty' as const }
-  const lavouraOk = !!(m.cultura || (m.culturas && m.culturas.length > 0))
-  const pecuariaOk = !!(m.pecuaria && m.pecuaria.length > 0)
-  const isDraft = m.status === 'rascunho'
-  return {
-    lavoura: lavouraOk ? (isDraft ? 'draft' : 'complete') : 'empty',
-    pecuaria: pecuariaOk ? (isDraft ? 'draft' : 'complete') : 'empty',
-  } as const
-}
-
-function getManejoProgress(talhaoId: string, manejo: ReturnType<typeof useDataStore>['manejo'], anoAgricola: number) {
-  const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-  if (!m) return 'empty' as const
-  const lavouraOk = !!(m.cultura || (m.culturas && m.culturas.length > 0))
-  const pecuariaOk = !!(m.pecuaria && m.pecuaria.length > 0)
-  if (lavouraOk && pecuariaOk) return 'complete' as const
-  if (lavouraOk || pecuariaOk) return 'partial' as const
-  return 'empty' as const
-}
-
-const PROGRESS_DOT: Record<'complete' | 'partial' | 'empty', string> = {
-  complete: 'bg-teal-500',
-  partial: 'bg-amber-500',
-  empty: 'bg-muted-foreground/40',
-}
-const PROGRESS_TOOLTIP: Record<'complete' | 'partial' | 'empty', string> = {
-  complete: 'Lavoura e Pecuária preenchidos',
-  partial: 'Preenchimento parcial',
-  empty: 'Sem dados de manejo',
-}
-
-function ManejoStatusDots({ lavoura, pecuaria }: { lavoura: 'complete' | 'draft' | 'empty'; pecuaria: 'complete' | 'draft' | 'empty' }) {
-  const color = (v: 'complete' | 'draft' | 'empty') =>
-    v === 'complete' ? 'text-success' : v === 'draft' ? 'text-warning' : 'text-muted-foreground/40'
-  const icon = (v: 'complete' | 'draft' | 'empty') =>
-    v === 'complete' ? '✓' : v === 'draft' ? '●' : '○'
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className={cn('font-medium', color(lavoura))}>
-        {icon(lavoura)} Lavoura
-      </span>
-      <span className={cn('font-medium', color(pecuaria))}>
-        {icon(pecuaria)} Pecuária
-      </span>
-    </div>
-  )
-}
-
-type YearStatus = 'aprovado' | 'pendente' | 'correcao' | 'rascunho' | 'empty'
-
-function getYearMrvStatus(
-  year: number,
-  projetoTalhoes: { id: string }[],
-  manejo: ReturnType<typeof useDataStore>['manejo']
-): YearStatus {
-  const records = projetoTalhoes
-    .map(t => manejo.find(m => m.talhaoId === t.id && m.anoAgricola === year && m.cenario === 'projeto'))
-    .filter(Boolean) as typeof manejo
-  if (records.length === 0) return 'empty'
-  if (records.some(m => m.status === 'correcao')) return 'correcao'
-  if (records.some(m => m.status === 'pendente')) return 'pendente'
-  if (records.every(m => m.status === 'aprovado')) return 'aprovado'
-  return 'rascunho'
-}
-
-const YEAR_STATUS_DOT: Record<YearStatus, string> = {
-  aprovado: 'bg-success',
-  pendente: 'bg-warning',
-  correcao: 'bg-danger',
-  rascunho: 'bg-muted-foreground/60',
-  empty:    'bg-muted-foreground/25',
-}
-
-const YEAR_STATUS_TITLE: Record<YearStatus, string> = {
-  aprovado: 'Aprovado',
-  pendente: 'Em validação',
-  correcao: 'Correção solicitada',
-  rascunho: 'Rascunho',
-  empty:    'Sem dados',
-}
 
 export default function MrvPage() {
   const { talhoes, fazendas, addTalhao, manejo, submitManejo, updateFazenda } = useDataStore()
@@ -322,7 +96,7 @@ export default function MrvPage() {
     setNovoTalhaoData(null)
   }
 
-  const handleKmlLoad = (result: { areaHa: number; geojson: any; fileName: string }) => {
+  const handleKmlLoad = (result: { areaHa: number; geojson: FeatureCollection; fileName: string }) => {
     if (fazenda) {
       updateFazenda(fazenda.id, { kmlGeoJson: result.geojson, areaTotalHa: result.areaHa })
       toast.success(`KML carregado: ${result.areaHa.toFixed(1)} ha`)
@@ -395,7 +169,6 @@ export default function MrvPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header da Fazenda */}
       {fazenda && (
         <Card className="border-primary/20 bg-primary/5 shadow-sm">
           <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -442,12 +215,10 @@ export default function MrvPage() {
 
       {fazenda && (
         <div className="bg-background border border-border/50 rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-          {/* Indicador de etapas */}
           <StepIndicator current={etapa} onGoTo={setEtapa} />
 
-          {/* Sub-header com status */}
           <div className="px-6 py-3 border-b border-border/50 bg-surface/30 flex flex-wrap items-center gap-3">
-            <StatusBadge status={primeiroManejo?.status || 'rascunho'} />
+            <MrvStatusBadge status={primeiroManejo?.status || 'rascunho'} />
             {primeiroManejo?.status === 'correcao' && (
               <span className="text-xs text-danger bg-danger/5 px-2 py-1 rounded border border-danger/10 max-w-[260px] truncate">
                 {primeiroManejo.comentarioCorrecao}
@@ -455,19 +226,16 @@ export default function MrvPage() {
             )}
           </div>
 
-          {/* ────────────────────────────────────────────
-              ETAPA 1 — Área da Fazenda
-          ──────────────────────────────────────────── */}
+          {/* ETAPA 1 — Área da Fazenda */}
           {etapa === 1 && (
             <div className="flex-1 flex flex-col">
-              {/* Horizontal underline tabs L2 */}
               <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
                 {areaTabItems.map(t => (
                   <button
                     key={t.id}
                     role="tab"
                     aria-selected={areaTab === t.id}
-                    onClick={() => setAreaTab(t.id as any)}
+                    onClick={() => setAreaTab(t.id)}
                     className={cn(
                       'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
                       areaTab === t.id
@@ -483,22 +251,27 @@ export default function MrvPage() {
 
               <div className="flex-1 overflow-y-auto p-6">
                 {areaTab === 'mapa' && (
-                  <div className="space-y-5 max-w-2xl">
+                  <div className="space-y-5">
                     <div>
                       <h3 className="text-base font-bold mb-1">Área da Propriedade</h3>
                       <p className="text-sm text-muted">Faça upload do KML ou visualize a área no mapa.</p>
                     </div>
-                    <KmlUploader onLoad={handleKmlLoad} label="Carregar KML da fazenda" />
-                    <div className="rounded-xl overflow-hidden border border-border/50">
-                      <FazendaMap talhoes={projetoTalhoes} height="280px" />
+                    {/* Side-by-side em telas grandes: 30% KML · 70% mapa */}
+                    <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+                      <div className="lg:w-[30%] h-full">
+                        <KmlUploader onLoad={handleKmlLoad} label="Carregar KML da fazenda" className="h-full" />
+                      </div>
+                      <div className="lg:w-[70%] rounded-xl overflow-hidden border border-border/50 min-h-[280px]">
+                        <FazendaMap talhoes={projetoTalhoes} height="100%" />
+                      </div>
                     </div>
                   </div>
                 )}
                 {areaTab === 'fertilizacao' && (
-                  <FertilizacaoForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                  <FertilizacaoForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
                 {areaTab === 'operacional' && (
-                  <OperacionalForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                  <OperacionalForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
                 {areaTab === 'documentos' && (
                   <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
@@ -509,9 +282,7 @@ export default function MrvPage() {
             </div>
           )}
 
-          {/* ────────────────────────────────────────────
-              ETAPA 2 — Talhões
-          ──────────────────────────────────────────── */}
+          {/* ETAPA 2 — Talhões */}
           {etapa === 2 && (
             <div className="flex-1 flex flex-col">
               <div className="flex-1 p-6 space-y-4 overflow-y-auto">
@@ -588,12 +359,9 @@ export default function MrvPage() {
             </div>
           )}
 
-          {/* ────────────────────────────────────────────
-              ETAPA 3 — Manejo por Talhão
-          ──────────────────────────────────────────── */}
+          {/* ETAPA 3 — Manejo por Talhão */}
           {etapa === 3 && (
             <div className="flex-1 flex flex-col">
-              {/* Seleção de talhões — checkbox chips */}
               <div className="px-6 py-4 border-b border-border/50 bg-surface/10 space-y-3">
                 <div className="flex flex-wrap gap-2">
                   {projetoTalhoes.map(t => {
@@ -646,7 +414,6 @@ export default function MrvPage() {
                 </div>
               </div>
 
-              {/* Horizontal underline tabs: Lavoura | Pecuária */}
               <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
                 {(() => {
                   const selectedManejo = manejo.filter(m =>
@@ -662,7 +429,7 @@ export default function MrvPage() {
                       key={item.id}
                       role="tab"
                       aria-selected={manejoTab === item.id}
-                      onClick={() => setManejoTab(item.id as any)}
+                      onClick={() => setManejoTab(item.id as typeof manejoTab)}
                       className={cn(
                         'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
                         manejoTab === item.id
@@ -680,10 +447,10 @@ export default function MrvPage() {
 
               <div className="flex-1 overflow-y-auto p-6">
                 {manejoTab === 'lavoura' && (
-                  <LavouraForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                  <LavouraForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
                 {manejoTab === 'pecuaria' && (
-                  <PecuariaForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                  <PecuariaForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
               </div>
 

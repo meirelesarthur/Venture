@@ -1,0 +1,374 @@
+import type {
+  ParametroSistema, Lead, Cliente, Fazenda, Talhao,
+  DadosManejoAnual, MrvStatus, FertilizanteSint, OperacaoMec, Calcario,
+  Comissao, HistoricoManejoAnual, ControlSite, Parceiro, AppUser,
+  DadoClimatico, ResultadoMotor, EventoHistorico,
+} from './types'
+
+// ─── Parâmetros iniciais ──────────────────────────────────────────────────────
+
+export const initialParametros: ParametroSistema[] = [
+  // Financeiros (editáveis)
+  { chave: 'preco_base_usd',       valor: 20,      descricao: 'Preço base do crédito (USD/VCU)',        editavel: true,  unidade: 'USD' },
+  { chave: 'ptax_fallback',        valor: 5.65,    descricao: 'PTAX simulado (R$/USD)',                 editavel: true,  unidade: 'R$'  },
+  { chave: 'buffer_pool',          valor: 0.15,    descricao: 'Buffer pool (fração)',                   editavel: true,  unidade: '%'   },
+  { chave: 'comissao_base_usd_ha', valor: 1.00,    descricao: 'Comissão base parceiro (USD/ha)',        editavel: true,  unidade: 'USD' },
+  // GWP (somente leitura)
+  { chave: 'gwp_ch4',              valor: 28,      descricao: 'GWP CH₄ IPCC AR5',                      editavel: false, unidade: 'GWP' },
+  { chave: 'gwp_n2o',              valor: 265,     descricao: 'GWP N₂O IPCC AR5',                      editavel: false, unidade: 'GWP' },
+  // EF N2O (somente leitura com override)
+  { chave: 'ef1_n2o_default',      valor: 0.01,    descricao: 'EF1 N₂O solos minerais (padrão)',       editavel: false, unidade: 'kgN2O/kgN' },
+  { chave: 'ef1_n2o_inibidor',     valor: 0.005,   descricao: 'EF1 N₂O com inibidor de nitrificação', editavel: false, unidade: 'kgN2O/kgN' },
+  { chave: 'ef1_n2o_umido',        valor: 0.016,   descricao: 'EF1 N₂O tropical úmido',               editavel: false, unidade: 'kgN2O/kgN' },
+  { chave: 'ef1_n2o_seco',         valor: 0.005,   descricao: 'EF1 N₂O tropical seco',                editavel: false, unidade: 'kgN2O/kgN' },
+  // Frações volat/leach (somente leitura)
+  { chave: 'frac_gasf',            valor: 0.11,    descricao: 'Frac_GASF fertilizante sintético',      editavel: false, unidade: 'fração' },
+  { chave: 'frac_gasf_ureia',      valor: 0.15,    descricao: 'Frac_GASF ureia',                       editavel: false, unidade: 'fração' },
+  { chave: 'frac_gasm',            valor: 0.21,    descricao: 'Frac_GASM fertilizante orgânico',       editavel: false, unidade: 'fração' },
+  { chave: 'frac_leach',           valor: 0.24,    descricao: 'Frac_LEACH lixiviação (úmido/irrigado)',editavel: false, unidade: 'fração' },
+  { chave: 'ef4_n2o_volat',        valor: 0.014,   descricao: 'EF4 N₂O volatilização NH3/NOx',        editavel: false, unidade: 'kgN2O/kgN' },
+  { chave: 'ef5_n2o_leach',        valor: 0.011,   descricao: 'EF5 N₂O lixiviação/escoamento',        editavel: false, unidade: 'kgN2O/kgN' },
+  // EF CO2 (somente leitura)
+  { chave: 'ef_diesel',            valor: 0.002886,descricao: 'EF CO₂ diesel (tCO₂/L)',               editavel: false, unidade: 'tCO2/L' },
+  { chave: 'ef_gasolina',          valor: 0.002310,descricao: 'EF CO₂ gasolina (tCO₂/L)',             editavel: false, unidade: 'tCO2/L' },
+  { chave: 'ef_limestone',         valor: 0.12,    descricao: 'EF calcário calcítico (tC/t)',          editavel: false, unidade: 'tC/t' },
+  { chave: 'ef_dolomite',          valor: 0.13,    descricao: 'EF dolomita (tC/t)',                    editavel: false, unidade: 'tC/t' },
+  // Fatores SOC simulador (editáveis)
+  { chave: 'soc_fator_spdpd',      valor: 2.5,     descricao: 'Fator SOC — Plantio Direto (SPD)',      editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_cobertura',  valor: 2.0,     descricao: 'Fator SOC — Plantas de Cobertura',     editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_rotacao',    valor: 1.2,     descricao: 'Fator SOC — Rotação de Culturas',      editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_ilpf',       valor: 3.5,     descricao: 'Fator SOC — ILPF/ILP',                editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_pastagem',   valor: 3.0,     descricao: 'Fator SOC — Reforma de Pastagem',      editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_org',        valor: 1.5,     descricao: 'Fator SOC — Adubação Orgânica',        editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_biologicos', valor: 0.8,     descricao: 'Fator SOC — Biológicos/Inoculantes',   editavel: true,  unidade: 'tCO2/ha/ano' },
+  { chave: 'soc_fator_rotac_past', valor: 1.8,     descricao: 'Fator SOC — Manejo Rotacionado Pasto', editavel: true,  unidade: 'tCO2/ha/ano' },
+  // Leakage (editável)
+  { chave: 'fator_leakage',        valor: 0.05,    descricao: 'Fator de leakage padrão (VMD0054)', editavel: true, unidade: 'fração' },
+]
+
+// ─── Mock data ─────────────────────────────────────────────────────────────────
+
+export const initialLeads: Lead[] = [
+  { id: 'l1', parceiroId: 'p1', nome: 'João da Silva', email: 'joao@email.com', telefone: '(65) 99812-3456', fazenda: 'Fazenda Boa Vista', municipio: 'Sorriso', estado: 'MT', area: 1200, culturas: ['Soja', 'Milho'], receitaEstimada: 284700, tco2eEstimado: 1245, status: 'aprovado', data: '12/10/2025' },
+  { id: 'l2', parceiroId: 'p1', nome: 'Fazendas Reunidas Agrop.', email: 'contato@agrop.com.br', fazenda: 'Agrop. São José', municipio: 'Lucas do Rio Verde', estado: 'MT', area: 5000, culturas: ['Soja', 'Algodão'], status: 'em_analise', data: '05/11/2025' },
+  { id: 'l3', parceiroId: 'p2', nome: 'Marcos Antônio', email: 'marcos@email.com', fazenda: 'Sítio das Águas', municipio: 'Cristalina', estado: 'GO', area: 850, culturas: ['Soja', 'Trigo'], receitaEstimada: 101388, tco2eEstimado: 530, status: 'contratado', data: '22/08/2025' },
+  { id: 'l4', parceiroId: 'p2', nome: 'Pedro Henrique', email: 'pedro@email.com', fazenda: 'Estância Bela', municipio: 'Rondonópolis', estado: 'MT', area: 300, culturas: ['Pastagem'], status: 'recusado', motivoRecusa: 'Área abaixo do mínimo elegível (500 ha)', data: '15/09/2025' },
+  { id: 'l5', parceiroId: 'p1', nome: 'Cooperativa Agro Cerrado', email: 'admin@agrocerrado.coop', fazenda: 'Fazenda Santa Luzia', municipio: 'Campo Verde', estado: 'MT', area: 3200, culturas: ['Soja', 'Milho', 'Algodão'], status: 'novo', data: '28/01/2026' },
+]
+
+export const initialClientes: Cliente[] = [
+  { id: 'c1', userId: 'cliente-1', nome: 'João da Silva', email: 'joao@fazendaboavista.com.br', area: 1200, statusMRV: 'Em Validação', motor: 'Pendente' },
+  { id: 'c2', nome: 'Agrop. São José', email: 'contato@agrop.com.br', area: 5000, statusMRV: 'Auditoria Aprovada', motor: 'Rodado' },
+  { id: 'c3', nome: 'Marcos Antônio', email: 'marcos@email.com', area: 850, statusMRV: 'Em submissão', motor: 'N/A' },
+]
+
+export const initialFazendas: Fazenda[] = [
+  { id: 'f1',  produtorId: 'c1', nome: 'Fazenda Boa Vista',       municipio: 'Sorriso',             estado: 'MT', areaTotalHa: 1200, zonaClimatica: 'tropical_umido' },
+  { id: 'f2',  produtorId: 'c2', nome: 'Agrop. São José',         municipio: 'Lucas do Rio Verde',  estado: 'MT', areaTotalHa: 5000, zonaClimatica: 'tropical_umido' },
+  { id: 'f3',  produtorId: 'c3', nome: 'Sítio das Águas',         municipio: 'Cristalina',          estado: 'GO', areaTotalHa:  850, zonaClimatica: 'tropical_seco'  },
+  { id: 'f4',  produtorId: 'c2', nome: 'Fazenda Santa Luzia',     municipio: 'Campo Verde',         estado: 'MT', areaTotalHa: 3200, zonaClimatica: 'tropical_umido' },
+  { id: 'f5',  produtorId: 'c3', nome: 'Estância Bela',           municipio: 'Rondonópolis',        estado: 'MT', areaTotalHa:  300, zonaClimatica: 'tropical_umido' },
+  { id: 'f6',  produtorId: 'c1', nome: 'Fazenda Cerrado Verde',   municipio: 'Rio Verde',           estado: 'GO', areaTotalHa: 1800, zonaClimatica: 'tropical_seco'  },
+  { id: 'f7',  produtorId: 'c2', nome: 'Fazenda São Francisco',   municipio: 'Barreiras',           estado: 'BA', areaTotalHa: 2400, zonaClimatica: 'tropical_seco'  },
+  { id: 'f8',  produtorId: 'c3', nome: 'Agropecuária Pampa Sul',  municipio: 'Bagé',                estado: 'RS', areaTotalHa: 4100, zonaClimatica: 'tropical_seco'  },
+  { id: 'f9',  produtorId: 'c1', nome: 'Fazenda Três Lagoas',     municipio: 'Três Lagoas',         estado: 'MS', areaTotalHa: 2100, zonaClimatica: 'tropical_umido' },
+  { id: 'f10', produtorId: 'c2', nome: 'Granja Boa Esperança',    municipio: 'Cascavel',            estado: 'PR', areaTotalHa:  650, zonaClimatica: 'tropical_seco'  },
+  { id: 'f11', produtorId: 'c3', nome: 'Fazenda Chapada Real',       municipio: 'Chapada dos Guimarães',   estado: 'MT', areaTotalHa: 1500, zonaClimatica: 'tropical_umido' },
+  { id: 'f12', produtorId: 'c1', nome: 'Soja do Cerrado',            municipio: 'Luís Eduardo Magalhães',  estado: 'BA', areaTotalHa: 3700, zonaClimatica: 'tropical_seco'  },
+  { id: 'f13', produtorId: 'c2', nome: 'Fazenda Tapajós',            municipio: 'Santarém',                estado: 'PA', areaTotalHa: 2800, zonaClimatica: 'tropical_umido' },
+  { id: 'f14', produtorId: 'c3', nome: 'Agropecuária Amazonas',      municipio: 'Manaus',                  estado: 'AM', areaTotalHa: 1900, zonaClimatica: 'tropical_umido' },
+  { id: 'f15', produtorId: 'c1', nome: 'Fazenda Serra do Norte',     municipio: 'Ariquemes',               estado: 'RO', areaTotalHa: 2200, zonaClimatica: 'tropical_umido' },
+  { id: 'f16', produtorId: 'c2', nome: 'Fazenda Rio Branco',         municipio: 'Rio Branco',              estado: 'AC', areaTotalHa: 1100, zonaClimatica: 'tropical_umido' },
+  { id: 'f17', produtorId: 'c3', nome: 'Granja Roraima Norte',       municipio: 'Boa Vista',               estado: 'RR', areaTotalHa:  870, zonaClimatica: 'tropical_umido' },
+  { id: 'f18', produtorId: 'c1', nome: 'Fazenda Capim Dourado',      municipio: 'Palmas',                  estado: 'TO', areaTotalHa: 3100, zonaClimatica: 'tropical_seco'  },
+  { id: 'f19', produtorId: 'c2', nome: 'Fazenda Beira-Rio',          municipio: 'Macapá',                  estado: 'AP', areaTotalHa:  640, zonaClimatica: 'tropical_umido' },
+  { id: 'f20', produtorId: 'c3', nome: 'Agropecuária Marajó',        municipio: 'Belém',                   estado: 'PA', areaTotalHa: 4200, zonaClimatica: 'tropical_umido' },
+  { id: 'f21', produtorId: 'c1', nome: 'Fazenda Parauapebas',        municipio: 'Parauapebas',             estado: 'PA', areaTotalHa: 1750, zonaClimatica: 'tropical_umido' },
+  { id: 'f22', produtorId: 'c2', nome: 'Fazenda Baixo Amazonas',     municipio: 'Parintins',               estado: 'AM', areaTotalHa: 2300, zonaClimatica: 'tropical_umido' },
+]
+
+export const initialTalhoes: Talhao[] = [
+  // Fazenda Boa Vista (f1)
+  { id: 't1', fazendaId: 'f1', nome: 'Talhão A1', areaHa: 450, tipo: 'projeto',
+    socPercent: 2.10, bdGCm3: 1.35, argilaPercent: 42, profundidadeCm: 30,
+    pontosColetados: 6, texturaFao: 'Clayey', grupoSoloFao: 'Ferralsols',
+    topografia: 'gently_sloping', dadosValidados: true, latCenter: -12.54, lngCenter: -55.72 },
+  { id: 't2', fazendaId: 'f1', nome: 'Talhão A2', areaHa: 380, tipo: 'projeto',
+    socPercent: 1.90, bdGCm3: 1.40, argilaPercent: 38, profundidadeCm: 30,
+    pontosColetados: 5, texturaFao: 'Clayey', grupoSoloFao: 'Ferralsols',
+    topografia: 'nearly_level', dadosValidados: true, latCenter: -12.56, lngCenter: -55.70 },
+  { id: 't3', fazendaId: 'f1', nome: 'Talhão B1 (Controle)', areaHa: 120, tipo: 'control_site',
+    socPercent: 2.05, bdGCm3: 1.38, argilaPercent: 40, profundidadeCm: 30,
+    pontosColetados: 4, texturaFao: 'Clayey', grupoSoloFao: 'Ferralsols',
+    dadosValidados: true, latCenter: -12.52, lngCenter: -55.68 },
+  { id: 't4', fazendaId: 'f1', nome: 'Reserva Legal', areaHa: 250, tipo: 'excluido',
+    profundidadeCm: 30, dadosValidados: false, latCenter: -12.50, lngCenter: -55.75 },
+  // Agrop. São José (f2)
+  { id: 't5', fazendaId: 'f2', nome: 'Talhão C1', areaHa: 1200, tipo: 'projeto',
+    socPercent: 2.40, bdGCm3: 1.28, argilaPercent: 55, profundidadeCm: 50,
+    pontosColetados: 8, texturaFao: 'Clayey', grupoSoloFao: 'Ferralsols',
+    topografia: 'nearly_level', dadosValidados: true, latCenter: -13.05, lngCenter: -55.90 },
+  { id: 't6', fazendaId: 'f2', nome: 'Talhão C2', areaHa: 1000, tipo: 'projeto',
+    socPercent: 2.20, bdGCm3: 1.32, argilaPercent: 50, profundidadeCm: 30,
+    pontosColetados: 7, texturaFao: 'Clayey', grupoSoloFao: 'Ferralsols',
+    topografia: 'nearly_level', dadosValidados: false, latCenter: -13.07, lngCenter: -55.92 },
+  { id: 't7', fazendaId: 'f2', nome: 'Talhão D1', areaHa: 800, tipo: 'projeto',
+    socPercent: 2.10, bdGCm3: 1.35, argilaPercent: 48, profundidadeCm: 30,
+    pontosColetados: 5, texturaFao: 'Loamy', grupoSoloFao: 'Latossolos',
+    topografia: 'gently_sloping', dadosValidados: false, latCenter: -13.10, lngCenter: -55.95 },
+  // Sítio das Águas (f3)
+  { id: 't8', fazendaId: 'f3', nome: 'Talhão E1', areaHa: 320, tipo: 'projeto',
+    socPercent: 1.80, bdGCm3: 1.45, argilaPercent: 28, profundidadeCm: 30,
+    pontosColetados: 4, texturaFao: 'Loamy', grupoSoloFao: 'Cambissolos',
+    topografia: 'gently_sloping', dadosValidados: true, latCenter: -16.78, lngCenter: -47.61 },
+  { id: 't9', fazendaId: 'f3', nome: 'Talhão E2', areaHa: 280, tipo: 'projeto',
+    socPercent: 1.70, bdGCm3: 1.48, argilaPercent: 25, profundidadeCm: 30,
+    pontosColetados: 3, texturaFao: 'Sandy Loam', grupoSoloFao: 'Cambissolos',
+    topografia: 'strongly_sloping', dadosValidados: false, latCenter: -16.80, lngCenter: -47.63 },
+]
+
+// ─── Histórico de Manejo ──────────────────────────────────────────────────────
+
+function manejoAno(
+  id: string, talhaoId: string, ano: number, cenario: 'baseline' | 'projeto',
+  status: MrvStatus, cultura: string,
+  prod: number, unid: 'sacas_ha' | 't_ha',
+  res: boolean, queima: boolean, irrig: boolean,
+  ferts: FertilizanteSint[], ops: OperacaoMec[],
+  calc?: Calcario[]
+): DadosManejoAnual {
+  return {
+    id, talhaoId, anoAgricola: ano, cenario, status,
+    cultura, produtividade: prod, unidadeProd: unid,
+    dataPlantio: `${ano}-10-15`, dataColheita: `${ano + 1}-02-28`,
+    residuosCampo: res, queimaResiduos: queima, usaIrrigacao: irrig,
+    fertilizantesSint: ferts, fertilizantesOrg: [], calcario: calc ?? [],
+    operacoes: ops, pecuaria: [], versao: 1,
+    submetidoEm: status !== 'rascunho' ? `${ano + 1}-03-15T10:00:00Z` : undefined,
+    aprovadoEm: status === 'aprovado' ? `${ano + 1}-04-01T09:00:00Z` : undefined,
+  }
+}
+
+const ferts_soja_baseline: FertilizanteSint[] = [
+  { tipo: 'ureia', qtdKgHa: 100, usaInibidor: false },
+  { tipo: 'map', qtdKgHa: 120, usaInibidor: false },
+]
+const ferts_milho_baseline: FertilizanteSint[] = [
+  { tipo: 'ureia', qtdKgHa: 200, usaInibidor: false },
+  { tipo: 'kcl', qtdKgHa: 80, usaInibidor: false },
+]
+const ferts_soja_projeto: FertilizanteSint[] = [
+  { tipo: 'ureia', qtdKgHa: 80, usaInibidor: true },
+  { tipo: 'map', qtdKgHa: 100, usaInibidor: false },
+]
+const ferts_milho_projeto: FertilizanteSint[] = [
+  { tipo: 'ureia', qtdKgHa: 160, usaInibidor: true },
+  { tipo: 'kcl', qtdKgHa: 80, usaInibidor: false },
+]
+const ops_soja: OperacaoMec[] = [
+  { operacao: 'plantio', combustivel: 'diesel', litros: 8 },
+  { operacao: 'colheita', combustivel: 'diesel', litros: 12 },
+  { operacao: 'pulverizacao', combustivel: 'diesel', litros: 4 },
+]
+const ops_milho: OperacaoMec[] = [
+  { operacao: 'plantio', combustivel: 'diesel', litros: 10 },
+  { operacao: 'colheita', combustivel: 'diesel', litros: 14 },
+  { operacao: 'cobertura', combustivel: 'diesel', litros: 5 },
+]
+const calc_base: Calcario[] = [{ tipo: 'calcitico', qtdTHa: 1.5 }]
+
+export const initialManejo: DadosManejoAnual[] = [
+  // ── Talhão A1 (f1) — 4 anos baseline + 1 ano projeto
+  manejoAno('m-t1-22-b', 't1', 2022, 'baseline', 'aprovado', 'soja',        55, 'sacas_ha', false, true,  false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t1-23-b', 't1', 2023, 'baseline', 'aprovado', 'soja/milho',  58, 'sacas_ha', false, true,  false, ferts_soja_baseline, ops_soja, calc_base),
+  manejoAno('m-t1-24-b', 't1', 2024, 'baseline', 'aprovado', 'soja',        60, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t1-25-p', 't1', 2025, 'projeto',  'aprovado', 'soja',        62, 'sacas_ha', true,  false, false, ferts_soja_projeto,  ops_soja, calc_base),
+  // ── Talhão A2 (f1)
+  manejoAno('m-t2-22-b', 't2', 2022, 'baseline', 'aprovado', 'soja',        52, 'sacas_ha', false, true,  false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t2-23-b', 't2', 2023, 'baseline', 'aprovado', 'milho',      110, 'sacas_ha', false, false, true,  ferts_milho_baseline, ops_milho),
+  manejoAno('m-t2-24-b', 't2', 2024, 'baseline', 'aprovado', 'soja',        57, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t2-25-p', 't2', 2025, 'projeto',  'pendente', 'milho',       120, 'sacas_ha', true,  false, true,  ferts_milho_projeto,  ops_milho),
+  // ── Talhão C1 (f2)
+  manejoAno('m-t5-22-b', 't5', 2022, 'baseline', 'aprovado', 'soja',        58, 'sacas_ha', false, true,  false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t5-23-b', 't5', 2023, 'baseline', 'aprovado', 'soja',        62, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja, calc_base),
+  manejoAno('m-t5-24-b', 't5', 2024, 'baseline', 'aprovado', 'milho',      115, 'sacas_ha', false, false, false, ferts_milho_baseline, ops_milho),
+  manejoAno('m-t5-25-p', 't5', 2025, 'projeto',  'correcao', 'soja',        68, 'sacas_ha', true,  false, false, ferts_soja_projeto,  ops_soja, calc_base),
+  // ── Talhão C2 (f2)
+  manejoAno('m-t6-23-b', 't6', 2023, 'baseline', 'aprovado', 'soja',        60, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t6-24-b', 't6', 2024, 'baseline', 'aprovado', 'soja',        63, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t6-25-p', 't6', 2025, 'projeto',  'rascunho', 'soja',        65, 'sacas_ha', true,  false, false, ferts_soja_projeto,  ops_soja),
+  // ── Talhão E1 (f3)
+  manejoAno('m-t8-22-b', 't8', 2022, 'baseline', 'aprovado', 'soja/trigo',  48, 'sacas_ha', false, true,  false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t8-23-b', 't8', 2023, 'baseline', 'aprovado', 'soja',        50, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja),
+  manejoAno('m-t8-24-b', 't8', 2024, 'baseline', 'aprovado', 'soja',        52, 'sacas_ha', false, false, false, ferts_soja_baseline, ops_soja, calc_base),
+  manejoAno('m-t8-25-p', 't8', 2025, 'projeto',  'pendente', 'soja',        55, 'sacas_ha', true,  false, false, ferts_soja_projeto,  ops_soja),
+]
+initialManejo.find(m => m.id === 'm-t5-25-p')!.comentarioCorrecao =
+  'Produtividade informada (68 sc/ha) superior ao teto metodológico regional. Anexar nota fiscal de venda.'
+
+export const initialComissoes: Comissao[] = [
+  { id: 'co1', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 0',  anoPagamento: 0,  valor: 6600, valorUsd: 1200, baseCalculo: '1.200 ha × $1,00/ha × R$5,50', status: 'pago',      dataVencimento: '15/10/2025' },
+  { id: 'co2', parceiroId: 'p2', leadId: 'l3', fazenda: 'Sítio das Águas',   parcela: 'Ano 0',  anoPagamento: 0,  valor: 4675, valorUsd: 850,  baseCalculo: '850 ha × $1,00/ha × R$5,50',   status: 'pago',      dataVencimento: '22/08/2025' },
+  { id: 'co3', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 2',  anoPagamento: 2,  valor: 3300, valorUsd: 600,  baseCalculo: '(2.4/2) × 1.200 ha × $1,00',  status: 'projetado', dataVencimento: '15/10/2027' },
+  { id: 'co4', parceiroId: 'p2', leadId: 'l3', fazenda: 'Sítio das Águas',   parcela: 'Ano 2',  anoPagamento: 2,  valor: 2337, valorUsd: 425,  baseCalculo: '(2.0/2) × 850 ha × $1,00',    status: 'projetado', dataVencimento: '22/08/2027' },
+  { id: 'co5', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 4',  anoPagamento: 4,  valor: 2750, valorUsd: 500,  baseCalculo: '(2.4/2) × 1.200 ha × $1,00',  status: 'projetado', dataVencimento: '15/10/2029' },
+  { id: 'co6', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 6',  anoPagamento: 6,  valor: 2750, valorUsd: 500,  baseCalculo: '(2.4/2) × 1.200 ha × $1,00',  status: 'projetado', dataVencimento: '15/10/2031' },
+  { id: 'co7', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 8',  anoPagamento: 8,  valor: 2750, valorUsd: 500,  baseCalculo: '(2.4/2) × 1.200 ha × $1,00',  status: 'projetado', dataVencimento: '15/10/2033' },
+  { id: 'co8', parceiroId: 'p1', leadId: 'l1', fazenda: 'Fazenda Boa Vista', parcela: 'Ano 10', anoPagamento: 10, valor: 2750, valorUsd: 500,  baseCalculo: '(2.4/2) × 1.200 ha × $1,00',  status: 'projetado', dataVencimento: '15/10/2035' },
+]
+
+// ─── Histórico de Manejo para Control Sites (Critério 9 — VMD0053) ───────────
+
+const cs_manejo_s1: HistoricoManejoAnual[] = [
+  { ano: 2020, preparo_solo: 'convencional',   tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2021, preparo_solo: 'convencional',   tipo_cultura: 'milho',  grupo_funcional: 'gramineas',   remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2022, preparo_solo: 'convencional',   tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2023, preparo_solo: 'convencional',   tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2024, preparo_solo: 'convencional',   tipo_cultura: 'milho',  grupo_funcional: 'gramineas',   remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+]
+const cs_manejo_s2: HistoricoManejoAnual[] = [
+  { ano: 2020, preparo_solo: 'plantio_direto', tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: true,  esterco: false, composto: false, irrigacao: false },
+  { ano: 2021, preparo_solo: 'plantio_direto', tipo_cultura: 'milho',  grupo_funcional: 'gramineas',   remocao_residuos: true,  esterco: false, composto: false, irrigacao: false },
+  { ano: 2022, preparo_solo: 'plantio_direto', tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: true,  esterco: false, composto: false, irrigacao: false },
+  { ano: 2023, preparo_solo: 'plantio_direto', tipo_cultura: 'soja',   grupo_funcional: 'leguminosas', remocao_residuos: true,  esterco: false, composto: false, irrigacao: false },
+  { ano: 2024, preparo_solo: 'plantio_direto', tipo_cultura: 'milho',  grupo_funcional: 'gramineas',   remocao_residuos: true,  esterco: false, composto: false, irrigacao: false },
+]
+const cs_manejo_s3: HistoricoManejoAnual[] = [
+  { ano: 2020, preparo_solo: 'convencional',   tipo_cultura: 'soja',       grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2021, preparo_solo: 'convencional',   tipo_cultura: 'soja/trigo', grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2022, preparo_solo: 'convencional',   tipo_cultura: 'soja',       grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2023, preparo_solo: 'convencional',   tipo_cultura: 'soja/trigo', grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+  { ano: 2024, preparo_solo: 'convencional',   tipo_cultura: 'soja',       grupo_funcional: 'leguminosas', remocao_residuos: false, esterco: false, composto: false, irrigacao: false },
+]
+
+export const initialSites: ControlSite[] = [
+  {
+    id: 's1', nome: 'Site Controle Sul MT-01',
+    gestor_nome: 'Eng. Cláudia Menezes', gestor_tipo: 'proponente',
+    status_cs: 'Ativo', data_cadastro: '2026-01-10T08:00:00Z',
+    centroide_lat: -12.541, centroide_lng: -55.733, area_ha: 54,
+    zona_climatica_ipcc: 'Tropical Moist', ecorregiao_wwf: 'Cerrado',
+    classe_textural_fao: 'Clayey', grupo_solo_wrb: 'Ferralsols',
+    classe_declividade: 'gently_sloping',
+    precip_media_anual_mm: 1720, fonte_precip: 'INMET Estação Sorriso-A923', dist_estacao_meteo_km: 18,
+    soc_medio_pct: 2.05, soc_ic_lower: 1.82, soc_ic_upper: 2.28, n_amostras_soc: 6,
+    data_primeira_coleta: '2025-06-15',
+    historico_manejo: cs_manejo_s1,
+    fazendasVinculadasIds: ['f1'], talhaoVinculadoIds: ['t1', 't2'],
+    area: 54, status: 'Valido', similaridade: 9, biome: 'Cerrado',
+    data: '10/01/2026', topografia: 'suave_ondulado', texturaFao: 'argilo-arenosa', distanciaKm: 12,
+  },
+  {
+    id: 's2', nome: 'Site Controle Sorriso-02',
+    gestor_nome: 'Roberto Alves (TechFarm)', gestor_tipo: 'parceiro',
+    status_cs: 'Ativo', data_cadastro: '2026-02-05T10:30:00Z',
+    centroide_lat: -13.065, centroide_lng: -55.887, area_ha: 120,
+    zona_climatica_ipcc: 'Tropical Moist', ecorregiao_wwf: 'Cerrado',
+    classe_textural_fao: 'Clayey', grupo_solo_wrb: 'Ferralsols',
+    classe_declividade: 'nearly_level',
+    precip_media_anual_mm: 1750, fonte_precip: 'ERA5-Land Grade 0.1°', dist_estacao_meteo_km: 35,
+    soc_medio_pct: 2.42, soc_ic_lower: 2.18, soc_ic_upper: 2.66, n_amostras_soc: 8,
+    data_primeira_coleta: '2025-07-20',
+    historico_manejo: cs_manejo_s2,
+    fazendasVinculadasIds: ['f1', 'f2'], talhaoVinculadoIds: ['t1', 't5'],
+    area: 120, status: 'Valido', similaridade: 11, biome: 'Cerrado',
+    data: '05/02/2026', topografia: 'plano', texturaFao: 'argilosa', distanciaKm: 8,
+  },
+  {
+    id: 's3', nome: 'Site Controle Cerrado-03',
+    gestor_nome: 'Embrapa Cerrados', gestor_tipo: 'externo',
+    status_cs: 'Em_implantacao', data_cadastro: '2026-03-22T14:00:00Z',
+    centroide_lat: -16.834, centroide_lng: -47.594, area_ha: 85,
+    zona_climatica_ipcc: 'Tropical Dry', ecorregiao_wwf: 'Cerrado',
+    classe_textural_fao: 'Loamy', grupo_solo_wrb: 'Cambissolos',
+    classe_declividade: 'strongly_sloping', aspecto_cardinal: 'NE',
+    precip_media_anual_mm: 1150, fonte_precip: 'INMET Estação Cristalina-A044', dist_estacao_meteo_km: 22,
+    soc_medio_pct: 1.78, soc_ic_lower: 1.52, soc_ic_upper: 2.04, n_amostras_soc: 5,
+    data_primeira_coleta: '2025-09-10',
+    historico_manejo: cs_manejo_s3,
+    fazendasVinculadasIds: ['f3'], talhaoVinculadoIds: ['t8'],
+    area: 85, status: 'Alerta', similaridade: 7, biome: 'Cerrado',
+    data: '22/03/2026', topografia: 'ondulado', texturaFao: 'franco-argilosa', distanciaKm: 47,
+  },
+]
+
+export const initialParceiros: Parceiro[] = [
+  { id: 'p1', userId: 'parceiro-1', nome: 'AgroConsult Ltda', email: 'contato@agroconsult.com', leadsGerados: 12, comissaoTotal: 15400, hectaresCarteira: 6050, status: 'ativo', comissaoPercentual: 100 },
+  { id: 'p2', nome: 'Sindicato Rural MG', email: 'sindicato@ruralmg.org', leadsGerados: 5, comissaoTotal: 7012, hectaresCarteira: 850, status: 'ativo', comissaoPercentual: 120 },
+  { id: 'p3', nome: 'TechFarm Solutions', email: 'hello@techfarm.ag', leadsGerados: 0, comissaoTotal: 0, hectaresCarteira: 0, status: 'convidado', comissaoPercentual: 100 },
+]
+
+export const initialUsuarios: AppUser[] = [
+  { id: 'u1', nome: 'Admin Principal', email: 'admin@venturecarbon.com', role: 'Super Admin', status: 'Ativo' },
+  { id: 'u2', nome: 'Auditor Externo', email: 'auditor@certificadora.com', role: 'Visualizador', status: 'Ativo' },
+  { id: 'u3', nome: 'João G. (Operações)', email: 'operacoes@venturecarbon.com', role: 'Editor', status: 'Bloqueado' },
+]
+
+const PRESET_CERRADO_UMIDO = {
+  tempMensal:   [27.2, 27.0, 26.8, 26.5, 25.2, 24.1, 23.8, 25.0, 27.0, 27.5, 27.3, 27.1],
+  precipMensal: [230,  210,  200,  100,   30,   10,    5,   20,   80,  160,  210,  240],
+  evapMensal:   [100,   90,   95,  105,   95,   85,   90,  100,  110,  115,  105,  100],
+}
+
+export const initialClimaticos: DadoClimatico[] = [
+  { id: 'cl1', talhaoId: 't1', ...PRESET_CERRADO_UMIDO, fonte: 'preset_cerrado', atualizadoEm: '2026-01-01' },
+  { id: 'cl2', talhaoId: 't2', ...PRESET_CERRADO_UMIDO, fonte: 'preset_cerrado', atualizadoEm: '2026-01-01' },
+  { id: 'cl3', talhaoId: 't5', ...PRESET_CERRADO_UMIDO, fonte: 'preset_cerrado', atualizadoEm: '2026-01-01' },
+]
+
+export const initialResultados: ResultadoMotor[] = [
+  {
+    id: 'r1', talhaoId: 't1', anoAgricola: 2024, cenario: 'ambos',
+    socBaselineTcHa: 58.18, socProjetoTcHa: 59.86, deltaSocTcHa: 1.68, co2SocTco2eHa: 6.16,
+    n2oBaselineTco2eHa: 1.24, n2oProjetoTco2eHa: 0.89, deltaN2oTco2eHa: 0.35,
+    ch4BaselineTco2eHa: 0.0, ch4ProjetoTco2eHa: 0.0, deltaCh4Tco2eHa: 0.0,
+    co2FfTco2eHa: 0.058, co2LimeTco2eHa: 0.066,
+    erTTco2eHa: 0.226, crTTco2eHa: 5.852, lkTTco2eHa: 0,
+    uncCo2: 0.0654, uncN2o: 0.15,
+    errNetTco2eHa: 6.078, bufferPoolRate: 0.15,
+    vcusEmitidosHa: 5.166, vcusEmitidosTotal: 2325,
+    rodadoEm: '2026-03-10T14:23:00Z', versaoMotor: '1.0.0-ts',
+    parametrosUsados: { gwp_ch4: 28, gwp_n2o: 265, ef1_n2o_default: 0.01, buffer_pool: 0.15 },
+  },
+]
+
+export const initialHistorico: EventoHistorico[] = [
+  {
+    id: 'h1', fazendaId: 'f1', timestampUtc: '2025-10-15T14:30:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [{ campo: 'areaTotalHa', valorAnterior: 1000, valorNovo: 1200 }],
+    observacao: 'Ajuste de área total baseado no novo georreferenciamento (CAR).'
+  },
+  {
+    id: 'h2', fazendaId: 'f1', timestampUtc: '2026-01-20T09:15:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [{ campo: '[Talhão A1] socPercent', valorAnterior: 1.85, valorNovo: 2.10 }],
+    observacao: 'Resultados da nova coleta de solo inseridos laboratorialmente.'
+  },
+  {
+    id: 'h3', fazendaId: 'f1', timestampUtc: '2026-02-10T11:00:00Z',
+    usuarioId: 'c1', usuarioNome: 'João da Silva', tipoAtor: 'cliente',
+    camposAlterados: [{ campo: '[Talhão A2] nome', valorAnterior: 'Área Leste', valorNovo: 'Talhão A2' }],
+    observacao: 'Padronização de nomenclatura interna.'
+  },
+  {
+    id: 'h4', fazendaId: 'f2', timestampUtc: '2025-11-05T16:45:00Z',
+    usuarioId: 'u1', usuarioNome: 'Admin Principal', tipoAtor: 'venture_carbon',
+    camposAlterados: [
+      { campo: '[Talhão C1] argilaPercent', valorAnterior: 45, valorNovo: 55 },
+      { campo: '[Talhão C1] bdGCm3', valorAnterior: 1.40, valorNovo: 1.28 }
+    ],
+    observacao: 'Correção dos dados granulométricos solicitada pela auditoria (VVB).'
+  },
+  {
+    id: 'h5', fazendaId: 'f3', timestampUtc: '2025-08-25T10:20:00Z',
+    usuarioId: 'c3', usuarioNome: 'Marcos Antônio', tipoAtor: 'cliente',
+    camposAlterados: [{ campo: 'municipio', valorAnterior: 'Luziânia', valorNovo: 'Cristalina' }],
+    observacao: 'Atualização do município sede da fazenda para registro correto.'
+  }
+]
+
+export const initialAlertas = [
+  { id: 'al1', texto: 'Falha no sync do motor (Processo X).', resolvido: false, criadoEm: new Date().toISOString() },
+  { id: 'al2', texto: 'Site de controle SC-03 perdeu similaridade >10%.', resolvido: false, criadoEm: new Date().toISOString() },
+]

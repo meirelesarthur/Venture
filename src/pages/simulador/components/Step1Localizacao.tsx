@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MapPin } from 'lucide-react'
+import type { SimuladorData } from '../schema'
 
 // Simple coordinate mapping for Brazil states (Capital coords just for the zoom effect)
 export const STATE_COORDS: Record<string, [number, number]> = {
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export function Step1Localizacao({ onNext, onPrev, onLocationSelect }: Props) {
-  const { register, setValue, watch, formState: { errors } } = useFormContext<any>()
+  const { register, setValue, watch, formState: { errors } } = useFormContext<SimuladorData>()
   const estado = watch('localizacao.estado')
 
   const handleStateChange = (val: string) => {
@@ -41,7 +42,7 @@ export function Step1Localizacao({ onNext, onPrev, onLocationSelect }: Props) {
     if (estado) {
       fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${estado}/municipios`)
         .then(res => res.json())
-        .then(data => setMunicipios(data.map((m: any) => m.nome).sort()))
+        .then(data => setMunicipios(data.map((m: { nome: string }) => m.nome).sort()))
         .catch(() => setMunicipios(['Erro ao carregar']))
     } else {
       setMunicipios([])
@@ -71,7 +72,7 @@ export function Step1Localizacao({ onNext, onPrev, onLocationSelect }: Props) {
             placeholder="Ex: Fazenda Boa Esperança" 
             className="rounded-xl h-11"
           />
-          {(errors.localizacao as any)?.fazenda && <span className="text-xs text-danger">{String((errors.localizacao as any).fazenda.message)}</span>}
+          {errors.localizacao?.fazenda && <span className="text-xs text-danger">{String(errors.localizacao.fazenda.message)}</span>}
         </div>
 
         <div className="space-y-1">
@@ -86,7 +87,7 @@ export function Step1Localizacao({ onNext, onPrev, onLocationSelect }: Props) {
               ))}
             </SelectContent>
           </Select>
-          {(errors.localizacao as any)?.estado && <span className="text-xs text-danger">{String((errors.localizacao as any).estado.message)}</span>}
+          {errors.localizacao?.estado && <span className="text-xs text-danger">{String(errors.localizacao.estado.message)}</span>}
         </div>
 
         <div className="space-y-1">
@@ -105,7 +106,7 @@ export function Step1Localizacao({ onNext, onPrev, onLocationSelect }: Props) {
               ))}
             </SelectContent>
           </Select>
-          {(errors.localizacao as any)?.municipio && <span className="text-xs text-danger">{String((errors.localizacao as any).municipio.message)}</span>}
+          {errors.localizacao?.municipio && <span className="text-xs text-danger">{String(errors.localizacao.municipio.message)}</span>}
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -45,13 +45,8 @@ export default function OperacionalForm({ talhaoIds, fazendaId, anoAgricola, loc
     input.click()
   }
 
-  useEffect(() => {
-    const primeiroTalhaoId = talhaoIds[0]
-    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    setOps(m?.operacoes ?? [{ operacao: '', combustivel: 'diesel', litros: 0 }])
-  }, [talhaoIds, anoAgricola])
 
-  const update = (i: number, f: keyof OperacaoMec, v: any) =>
+  const update = <K extends keyof OperacaoMec>(i: number, f: K, v: OperacaoMec[K]) =>
     setOps(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
 
   const totalCO2 = ops.reduce((acc, op) => acc + (EF_COMB[op.combustivel] ?? 0) * op.litros / 1000, 0)

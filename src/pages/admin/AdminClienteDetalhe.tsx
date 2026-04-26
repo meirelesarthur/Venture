@@ -1,23 +1,13 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useDataStore } from '@/store/data'
-import { ArrowLeft, Map, CheckCircle2, Factory, ExternalLink, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Map, Factory, ExternalLink, MessageCircle, CheckCircle2 } from 'lucide-react'
 import type { MrvStatus } from '@/store/data'
 import { toast } from 'sonner'
-
-function MrvStatusBadge({ status }: { status: MrvStatus }) {
-  if (status === 'rascunho') return null;
-  const cfg = {
-    pendente:  { label: 'Em Validação',  cls: 'bg-warning/10 text-warning' },
-    aprovado:  { label: 'Aprovado',      cls: 'bg-success/10 text-success' },
-    correcao:  { label: 'Correção',      cls: 'bg-danger/10 text-danger' },
-  }[status as Exclude<MrvStatus, 'rascunho'>]
-  return <Badge variant="outline" className={`shadow-none text-xs ${cfg.cls}`}>{cfg.label}</Badge>
-}
+import { MrvStatusBadge } from '@/components/ui/mrv-status-badge'
 
 export default function AdminClienteDetalhe() {
   const { id } = useParams()

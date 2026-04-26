@@ -1,22 +1,12 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useDataStore } from '@/store/data'
 import type { MrvStatus } from '@/store/data'
-import { CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight, MessageCircle, Filter } from 'lucide-react'
+import { ChevronDown, ChevronRight, MessageCircle, Filter } from 'lucide-react'
 import { toast } from 'sonner'
-
-function StatusBadge({ status }: { status: MrvStatus }) {
-  const cfg = {
-    rascunho:  { label: 'Rascunho',   cls: 'bg-muted/20 text-muted-foreground border-border/50' },
-    pendente:  { label: 'Em Análise', cls: 'bg-warning/10 text-warning border-warning/20' },
-    aprovado:  { label: 'Aprovado',   cls: 'bg-success/10 text-success border-success/20' },
-    correcao:  { label: 'Correção',   cls: 'bg-danger/10 text-danger border-danger/20' },
-  }[status]
-  return <Badge variant="outline" className={`shadow-none text-xs ${cfg.cls}`}>{cfg.label}</Badge>
-}
+import { MrvStatusBadge } from '@/components/ui/mrv-status-badge'
 
 export default function AdminValidacaoMRV() {
   const { manejo, talhoes, fazendas, clientes, approveManejo, requestCorrection } = useDataStore()
@@ -138,7 +128,7 @@ export default function AdminValidacaoMRV() {
                   </button>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  <StatusBadge status={m.status} />
+                  <MrvStatusBadge status={m.status} />
                   {m.status === 'pendente' && (
                     <div className="flex items-center gap-2">
                       <Button

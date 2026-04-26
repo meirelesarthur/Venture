@@ -3,26 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
-import { CheckCircle2, Clock, XCircle, UserCheck } from 'lucide-react'
-
-function LeadStatusBadge({ status, motivo }: { status: string; motivo?: string }) {
-  const map: Record<string, { label: string; cls: string; Icon: any }> = {
-    novo:      { label: 'Novo',           cls: 'bg-muted/20 text-muted-foreground border-border/50', Icon: null },
-    em_analise:{ label: 'Em Análise',     cls: 'bg-warning/10 text-warning border-warning/20',     Icon: Clock },
-    aprovado:  { label: 'Aprovado',       cls: 'bg-primary/10 text-primary border-primary/20',     Icon: CheckCircle2 },
-    contratado:{ label: 'Contratado',     cls: 'bg-success/10 text-success border-success/20',     Icon: CheckCircle2 },
-    efetivado: { label: 'Cliente',        cls: 'bg-success/10 text-success border-success/20',     Icon: UserCheck },
-    recusado:  { label: 'Recusado',       cls: 'bg-danger/10 text-danger border-danger/20',        Icon: XCircle },
-  }
-  const cfg = map[status] ?? map.novo
-  return (
-    <span title={motivo} className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${cfg.cls}`}>
-      {cfg.Icon && <cfg.Icon size={11} />}
-      {cfg.label}
-      {motivo && <span className="ml-1 opacity-70" title={motivo}>ⓘ</span>}
-    </span>
-  )
-}
+import { LeadStatusBadge } from '@/components/ui/lead-status-badge'
 
 export default function LeadsPage() {
   const { leads } = useDataStore()

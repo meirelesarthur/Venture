@@ -5,33 +5,16 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, Edit2, Zap, MapPin, Cloud, FlaskConical, Leaf,
-  Link2, CheckCircle2, XCircle, Clock, Activity, Info,
+  Link2, Clock, Activity, Info, CheckCircle2, XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDataStore } from '@/store/data'
 import { rodarMatching } from '@/motor/matchingControlSite'
 import { toast } from 'sonner'
 import { useState } from 'react'
-
-function ScoreBar({ score }: { score: number }) {
-  const color = score === 100 ? 'bg-success' : score >= 78 ? 'bg-warning' : 'bg-danger'
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-        <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${score}%` }} />
-      </div>
-      <span className="text-xs font-mono font-bold">{score}%</span>
-    </div>
-  )
-}
-
-function CritBadge({ pass }: { pass: boolean | 'pendente' }) {
-  if (pass === 'pendente') return <Badge className="bg-warning/10 text-warning border-warning/20 text-[10px] shadow-none">Pendente</Badge>
-  if (pass) return <Badge className="bg-success/10 text-success border-success/20 text-[10px] shadow-none"><CheckCircle2 size={10} className="mr-0.5" />PASS</Badge>
-  return <Badge className="bg-danger/10 text-danger border-danger/20 text-[10px] shadow-none"><XCircle size={10} className="mr-0.5" />FAIL</Badge>
-}
+import { ScoreBar } from '@/components/ui/score-bar'
+import { CritBadge } from '@/components/ui/crit-badge'
 
 function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
   return (
@@ -237,7 +220,7 @@ export default function AdminControlSiteDetalhe() {
                     </div>
                     {matchFaz ? (
                       <div className="flex items-center gap-2 w-32">
-                        <ScoreBar score={matchFaz.score} />
+                        <ScoreBar score={matchFaz.score} size="md" />
                       </div>
                     ) : (
                       <Badge className="bg-muted/10 text-muted border-border/30 text-[10px] shadow-none">Sem matching</Badge>

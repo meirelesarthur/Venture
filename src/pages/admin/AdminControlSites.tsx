@@ -1,58 +1,21 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
-  MapPin, Plus, AlertCircle, CheckCircle2, XCircle, Clock,
-  BarChart3, Zap, Activity, ChevronRight, Info, Map, Loader2,
+  MapPin, Plus, AlertCircle, BarChart3, Zap, Activity, ChevronRight, Info, Map,
+  Loader2, CheckCircle2, XCircle, Clock,
 } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import { rodarMatching } from '@/motor/matchingControlSite'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { useMemo } from 'react'
-
-// ─── Score bar ────────────────────────────────────────────────────────────────
-function ScoreBar({ score }: { score: number }) {
-  const color = score === 100 ? 'bg-success' : score >= 78 ? 'bg-warning' : 'bg-danger'
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-        <div className={`h-1.5 rounded-full transition-all ${color}`} style={{ width: `${score}%` }} />
-      </div>
-      <span className="text-xs font-mono font-semibold">{score}%</span>
-    </div>
-  )
-}
-
-function AlertaCard({ nivel, texto, ctaLabel, onCta }: { nivel: '🔴' | '🟡' | '🔵'; texto: string; ctaLabel?: string; onCta?: () => void }) {
-  const cls =
-    nivel === '🔴' ? 'border-danger/30 bg-danger/5 text-danger' :
-    nivel === '🟡' ? 'border-warning/30 bg-warning/5 text-warning' :
-    'border-primary/30 bg-primary/5 text-primary'
-  return (
-    <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs ${cls}`}>
-      <span className="text-base leading-none shrink-0">{nivel}</span>
-      <span className="flex-1">{texto}</span>
-      {ctaLabel && onCta && (
-        <button onClick={onCta} className="shrink-0 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity whitespace-nowrap">
-          {ctaLabel}
-        </button>
-      )}
-    </div>
-  )
-}
-
-function CritBadge({ pass }: { pass: boolean | 'pendente' }) {
-  if (pass === 'pendente')
-    return <Badge className="bg-warning/10 text-warning border-warning/20 text-[10px] shadow-none">Pendente</Badge>
-  if (pass)
-    return <Badge className="bg-success/10 text-success border-success/20 text-[10px] shadow-none"><CheckCircle2 size={10} className="mr-0.5" />PASS</Badge>
-  return <Badge className="bg-danger/10 text-danger border-danger/20 text-[10px] shadow-none"><XCircle size={10} className="mr-0.5" />FAIL</Badge>
-}
+import { ScoreBar } from '@/components/ui/score-bar'
+import { CritBadge } from '@/components/ui/crit-badge'
+import { AlertaCard } from './components/control-site/AlertaCard'
 
 export default function AdminControlSites() {
   const navigate = useNavigate()

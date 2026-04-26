@@ -1,25 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useDataStore } from '@/store/data'
-import { Users, Map, CheckCircle2, Clock, MapPin, ArrowRight } from 'lucide-react'
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    'Auditoria Aprovada': 'bg-success/10 text-success border-success/20',
-    'Em Validação':       'bg-primary/10 text-primary border-primary/20',
-    'Em submissão':       'bg-warning/10 text-warning border-warning/20',
-    'Aberto':             'bg-muted/20 text-muted-foreground border-border/50',
-    'N/A':                'bg-muted/20 text-muted-foreground border-border/50',
-  }
-  return (
-    <Badge variant="outline" className={`shadow-none text-xs ${map[status] ?? 'bg-muted/20 text-muted-foreground'}`}>
-      {status}
-    </Badge>
-  )
-}
+import { Users, Map, MapPin, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
+import { ClienteStatusBadge } from '@/components/ui/cliente-status-badge'
 
 export default function AdminClientes() {
   const { clientes, fazendas, talhoes } = useDataStore()
@@ -111,7 +96,7 @@ export default function AdminClientes() {
                         <span className="text-xs text-primary">{meusTalhoes.filter(t => t.tipo === 'control_site').length} ctrl.</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center"><StatusBadge status={c.statusMRV} /></TableCell>
+                    <TableCell className="text-center"><ClienteStatusBadge status={c.statusMRV} /></TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="ghost" asChild className="rounded-xl gap-1 h-8">
                         <Link to={`/admin/clientes/${c.id}`}><ArrowRight size={14} /></Link>

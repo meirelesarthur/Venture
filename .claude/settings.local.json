@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"agritech carbon credits SaaS dashboard B2B professional\" --design-system -f markdown)",
+      "Bash(python3 skills/ui-ux-pro-max/scripts/search.py \"multi-step wizard stepper form navigation\" --domain ux -n 15)",
+      "Bash(npx shadcn@latest add @mapcn/map)",
+      "Bash(npx shadcn@latest add @mapcn/map --overwrite)",
+      "Bash(find src *)",
+      "Bash(node -e ' *)",
+      "Bash(powershell -Command ' *)",
+      "Bash(npx shadcn@latest add resizable --yes)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/maplibre-gl/package.json'\\).version\\)\")",
+      "Bash(npx vite *)",
+      "Bash(git add *)"
+    ]
+  }
+}

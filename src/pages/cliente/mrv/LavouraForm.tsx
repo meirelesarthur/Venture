@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -53,30 +53,8 @@ export default function LavouraForm({ talhaoIds, fazendaId, anoAgricola, locked 
   const [usaIrrigacao, setUsaIrrigacao] = useState(existente?.usaIrrigacao ?? false)
   const [tipoIrrig, setTipoIrrig] = useState(existente?.tipoIrrigacao ?? '')
 
-  // Atualiza ao trocar de talhão/ano
-  useEffect(() => {
-    const primeiroTalhaoId = talhaoIds[0]
-    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    if (m) {
-      if (m.culturas && m.culturas.length > 0) {
-        setCulturas(m.culturas)
-      } else if (m.cultura) {
-        setCulturas([{ id: uuidv4(), nome: m.cultura, dataPlantio: m.dataPlantio, dataColheita: m.dataColheita, produtividade: m.produtividade, unidadeProd: m.unidadeProd }])
-      } else {
-        setCulturas([{ id: uuidv4(), nome: '' }])
-      }
-      setResiduosCampo(m.residuosCampo ?? true)
-      setQueimaResiduos(m.queimaResiduos ?? false)
-      setUsaIrrigacao(m.usaIrrigacao ?? false)
-      setTipoIrrig(m.tipoIrrigacao ?? '')
-      setPlantas(m.plantasCobertura ?? [])
-    } else {
-      setCulturas([{ id: uuidv4(), nome: '' }])
-      setResiduosCampo(true); setQueimaResiduos(false); setUsaIrrigacao(false); setTipoIrrig(''); setPlantas([])
-    }
-  }, [talhaoIds, anoAgricola])
 
-  const handleUpdateCultura = (id: string, field: keyof CulturaManejo, value: any) => {
+  const handleUpdateCultura = <K extends keyof CulturaManejo>(id: string, field: K, value: CulturaManejo[K]) => {
     setCulturas(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 

@@ -32,7 +32,7 @@ export default function RecuperarSenhaPage() {
     setTimeout(() => {
       setIsLoading(false)
       setIsSubmitted(true)
-      console.log('Recovery requested for', data.email)
+
     }, 1000)
   }
 

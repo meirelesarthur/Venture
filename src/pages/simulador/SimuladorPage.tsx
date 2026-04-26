@@ -2,14 +2,12 @@ import { useState, useMemo, useEffect } from 'react'
 import FarmImage from '@/assets/farm.jpeg'
 import { FormProvider, useForm, useFormContext } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { simuladorSchema, type SimuladorData } from './schema'
+import { simuladorSchema, type SimuladorData, type CulturaSimulador } from './schema'
+import type { FieldPath } from 'react-hook-form'
 import { useDataStore } from '@/store/data'
 import { TrendingUp } from 'lucide-react'
-
-const PRATICA_FACTOR: Record<string, number> = {
-  plantio_direto: 1.8, cobertura: 1.5, rotacao: 1.2, ilpf: 2.0,
-  pastagem: 1.4, organico: 1.3, biologicos: 1.1, rotac_pasto: 1.6,
-}
+import { PRATICA_PARAM, CULTURA_BONUS, BUFFER_POOL, SOC_FATOR_FALLBACK, PRATICA_SECUNDARIA_MULT, CULTURA_BONUS_MULT, FC_MINIMO, CUSTO_OP_BRL_HA, PREMIO_VALUATION, PTAX_FALLBACK } from '@/constants/simulador'
+import type { FeatureCollection } from 'geojson'
 
 const SESSION_KEY = 'simulador_draft'
 
@@ -18,18 +16,26 @@ function TickerEstimativa() {
   const { parametros } = useDataStore()
   const area = watch('area.hectares')
   const praticas = watch('praticas') ?? []
+  const culturas = watch('culturas') ?? []
   const horizonte = parseInt(watch('horizonte') || '10', 10)
 
   const estimativa = useMemo(() => {
     if (!area || area <= 0) return null
-    const ptax  = parametros.find(p => p.chave === 'ptax_fallback')?.valor ?? 5.65
-    const preco = parametros.find(p => p.chave === 'preco_base_usd')?.valor ?? 20
-    const vals  = praticas.map(p => PRATICA_FACTOR[p] ?? 0.5).sort((a, b) => b - a)
-    const fC    = vals.length > 0 ? vals[0] + 0.3 * vals.slice(1).reduce((s, v) => s + v, 0) : 0.3
-    const tco2e = area * Math.max(fC, 0.3)
-    const lucro = tco2e * preco * ptax * 0.85 - area * 15
+    const getParam = (k: string) => parametros.find(p => p.chave === k)?.valor ?? 0
+    const ptax  = getParam('ptax_fallback') || PTAX_FALLBACK
+    const preco = getParam('preco_base_usd') || 20
+    const preco_brl = preco * ptax
+
+    const vals = praticas.map(p => getParam(PRATICA_PARAM[p] || '') || SOC_FATOR_FALLBACK).sort((a, b) => b - a)
+    let fC = vals.length > 0 ? vals[0] + PRATICA_SECUNDARIA_MULT * vals.slice(1).reduce((s, v) => s + v, 0) : 0
+    const bonusCulturas = culturas.reduce((acc: number, c: CulturaSimulador) => acc + (CULTURA_BONUS[c.tipo_preparo || 'convencional'] || 0), 0)
+    fC = fC + bonusCulturas * CULTURA_BONUS_MULT
+
+    const tco2e = area * Math.max(fC, FC_MINIMO)
+    const rec_carbono = tco2e * preco_brl * (1 - BUFFER_POOL)
+    const lucro = rec_carbono + rec_carbono * PREMIO_VALUATION - area * CUSTO_OP_BRL_HA
     return Math.round(lucro * horizonte)
-  }, [area, praticas, horizonte, parametros])
+  }, [area, praticas, culturas, horizonte, parametros])
 
   if (!estimativa || estimativa <= 0) return null
 
@@ -61,14 +67,13 @@ export default function SimuladorPage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [mapCenter, setMapCenter] = useState<[number, number]>([-15.7801, -47.9292])
   const [mapZoom, setMapZoom] = useState(4)
-  const [mapGeoJson, setMapGeoJson] = useState<any>(null)
+  const [mapGeoJson, setMapGeoJson] = useState<FeatureCollection | null>(null)
   const [isMapEditMode, setIsMapEditMode] = useState(false)
 
   const addLead = useDataStore(state => state.addLead)
 
   const draft = getSessionDraft()
   const methods = useForm<SimuladorData>({
-    // @ts-ignore
     resolver: zodResolver(simuladorSchema),
     defaultValues: draft ?? {
       localizacao: { fazenda: '', estado: '', municipio: '' },
@@ -96,7 +101,7 @@ export default function SimuladorPage() {
     if (currentStep === 5) fieldsToValidate = ['lead.nome', 'lead.email', 'lead.telefone']
 
     if (fieldsToValidate.length > 0) {
-      const isValid = await methods.trigger(fieldsToValidate as any)
+      const isValid = await methods.trigger(fieldsToValidate as FieldPath<SimuladorData>[])
       if (!isValid) return
     }
 
@@ -124,7 +129,7 @@ export default function SimuladorPage() {
     setMapZoom(7)
   }
 
-  const handleGeoJsonSelect = (geojson: any) => {
+  const handleGeoJsonSelect = (geojson: FeatureCollection) => {
     setMapGeoJson(geojson)
   }
 

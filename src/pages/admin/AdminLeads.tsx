@@ -1,30 +1,13 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { CheckCircle2, Search, XCircle, Clock, UserCheck, Users, AlertTriangle } from 'lucide-react'
+import { Search, Users, AlertTriangle, XCircle, CheckCircle2 } from 'lucide-react'
 import { useDataStore } from '@/store/data'
 import type { LeadStatus } from '@/store/data'
 import { toast } from 'sonner'
-
-function StatusBadge({ status }: { status: LeadStatus }) {
-  const cfg: Record<LeadStatus, { label: string; cls: string; Icon: any }> = {
-    novo:       { label: 'Novo',      cls: 'bg-muted/20 text-muted-foreground border-border/50', Icon: null },
-    em_analise: { label: 'Em Análise',cls: 'bg-warning/10 text-warning border-warning/20',     Icon: Clock },
-    aprovado:   { label: 'Aprovado',  cls: 'bg-primary/10 text-primary border-primary/20',     Icon: CheckCircle2 },
-    contratado: { label: 'Contratado',cls: 'bg-success/10 text-success border-success/20',     Icon: CheckCircle2 },
-    efetivado:  { label: 'Cliente',   cls: 'bg-success/10 text-success border-success/20',     Icon: UserCheck },
-    recusado:   { label: 'Recusado',  cls: 'bg-danger/10 text-danger border-danger/20',        Icon: XCircle },
-  }
-  const c = cfg[status]
-  return (
-    <Badge variant="outline" className={`shadow-none ${c.cls} flex items-center gap-1`}>
-      {c.Icon && <c.Icon size={11} />} {c.label}
-    </Badge>
-  )
-}
+import { LeadStatusBadge } from '@/components/ui/lead-status-badge'
 
 export default function AdminLeads() {
   const { leads, updateLeadStatus, convertLeadToCliente, parceiros } = useDataStore()
@@ -138,7 +121,7 @@ export default function AdminLeads() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <StatusBadge status={lead.status} />
+                    <LeadStatusBadge status={lead.status} />
                     {lead.motivoRecusa && (
                       <p className="text-xs text-danger mt-1 truncate max-w-xs" title={lead.motivoRecusa}>{lead.motivoRecusa}</p>
                     )}

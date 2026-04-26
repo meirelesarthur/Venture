@@ -113,7 +113,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto space-y-2 p-4">
+          <nav className="flex-1 overflow-y-auto space-y-2 p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {items.map((item) => {
               const isActive = activeItem?.href === item.href
               return (

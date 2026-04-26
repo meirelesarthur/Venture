@@ -10,6 +10,82 @@ import type { DadosManejoAnual, Talhao, DadoClimatico, ParametroSistema, Resulta
 
 export type LogCallback = (step: string, percent: number) => void
 
+// ─── Tipo público dos intermediários de cálculo ───────────────────────────────
+import type { DetalheCombustivel, DetalheCal } from './co2'
+import type { ParcelaER } from './creditos'
+
+interface RothCIntermediarios {
+  socTotal: number; iom: number; socAtivo: number; inputC: number
+  hiUsado: number; raizPa: number; bioAerea: number; bioRaiz: number
+  yieldTHa: number; fracDPM: number; fracRPM: number; tipoInput: string
+  dpmRpmRatio: number; xParticao: number; fracCO2: number; fracBioHum: number
+  fatorA_mes1: number; tempC_mes1: number; fatorB_mes1: number
+  maxTSMD: number; fatorC_mes1: number
+  k_DPM: number; k_RPM: number; k_BIO: number; k_HUM: number
+  compFinalDPM: number; compFinalRPM: number; compFinalBIO: number
+  compFinalHUM: number; compFinalIOM: number
+  deltaSoc: number; co2Eq: number; socPorAno: number[]
+}
+
+interface N2OProjIntermediarios {
+  ef1Usado: number; zonaClimatica: string; temInibidor: boolean
+  totalNSint: number; totalNOrg: number; totalNFert: number
+  n2oDireto: number; nVolatSint: number; nVolatOrg: number; nVolatTotal: number
+  ef4: number; n2oVolat: number; nLeachTotal: number; fracLeach: number
+  ef5: number; n2oLeach: number; fManure: number; efEsterco: number
+  n2oEsterco: number; bioMassaLeg: number; nContent: number
+  fCrBnf: number; efBnf: number; n2oBnf: number; n2oTotal: number
+}
+
+interface N2OBaseIntermediarios {
+  totalNFert: number; ef1Usado: number; n2oDireto: number
+  n2oIndireto: number; n2oEsterco: number; n2oBnf: number; n2oTotal: number
+}
+
+interface CH4ProjIntermediarios {
+  gwpCH4: number; popAnimais: number; efEntMedioKgCab: number
+  ch4EntKgTotal: number; ch4Enterico: number; vsRateMedio: number
+  efCH4md: number; ch4EstercoKgHa: number; ch4Esterco: number
+  bioAeraeResd: number; cf: number; mbQueimado: number
+  efCH4bb: number; ch4QueimaKgHa: number; ch4Queima: number
+}
+
+interface CH4BaseIntermediarios {
+  gwpCH4: number; popAnimais: number
+  ch4Enterico: number; ch4Esterco: number; ch4Queima: number; ch4Total: number
+}
+
+interface CO2ProjIntermediarios {
+  efDiesel: number; efGasolina: number; detalhesCombust: DetalheCombustivel[]
+  co2Ff: number; efCalcitico: number; efDolomitico: number
+  fatorCCO2: number; detalhesCalc: DetalheCal[]; co2Lime: number
+}
+
+interface CO2BaseIntermediarios {
+  detalhesCombust: DetalheCombustivel[]; co2Ff: number
+  detalhesCalc: DetalheCal[]; co2Lime: number
+}
+
+interface CreditosIntermediarios {
+  parcelasER: ParcelaER[]; erTBruto: number; uncCo2: number; uncN2o: number
+  deltaCO2SocNet: number; iSinal: number; crTBruto: number
+  uncCo2AplicadaCR: number; fpdsUsado: number; hasPecuariaLeakage: boolean
+  lkDetalhado: Record<string, number>; deducaoUncCO2: number
+  deducaoUncN2O: number; errNetStep: number; vcusStep: number
+}
+
+export interface DetalhesCalculo {
+  rothcBase: RothCIntermediarios
+  rothcProj: RothCIntermediarios
+  n2oProj: N2OProjIntermediarios
+  n2oBase: N2OBaseIntermediarios
+  ch4Proj: CH4ProjIntermediarios
+  ch4Base: CH4BaseIntermediarios
+  co2Proj: CO2ProjIntermediarios
+  co2Base: CO2BaseIntermediarios
+  creditos: CreditosIntermediarios
+}
+
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
 
 // Converte ParametroSistema[] para Record<string, number> para facilitar acesso

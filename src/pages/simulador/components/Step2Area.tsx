@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import type { SimuladorData } from '../schema'
 import { ArrowRight, ArrowLeft, UploadCloud, CheckCircle2, FileX, Map as MapIcon } from 'lucide-react'
 import area from '@turf/area'
+import type { FeatureCollection, Feature } from 'geojson'
 import { cn } from '@/lib/utils'
 import { MapDemarcationOverlay } from '@/components/MapDemarcationOverlay'
 
@@ -15,16 +16,15 @@ import { kml } from '@tmcw/togeojson'
  * Parseia KML e extrai coordenadas de Polygon/LineString/Point
  * Retorna um GeoJSON FeatureCollection usando togeojson
  */
-function kmlToGeoJson(kmlText: string): { geojson: any; hectares: number } | null {
+function kmlToGeoJson(kmlText: string): { geojson: FeatureCollection; hectares: number } | null {
   try {
     const parser = new DOMParser()
     const doc = parser.parseFromString(kmlText, 'text/xml')
-    const geojson = kml(doc)
-    
+    const geojson = kml(doc) as FeatureCollection
+
     if (!geojson || !geojson.features || geojson.features.length === 0) return null
 
-    // Calcular área apenas de polígonos
-    const totalArea = geojson.features.reduce((acc: number, f: any) => {
+    const totalArea = geojson.features.reduce((acc: number, f: Feature) => {
       if (f.geometry && f.geometry.type === 'Polygon') {
         return acc + area(f)
       }
@@ -48,7 +48,7 @@ export function Step2Area({
   onPrev: () => void; 
   onMapEditToggle?: (active: boolean) => void; 
   onLocationSelect?: (coord: [number, number]) => void;
-  onGeoJsonSelect?: (geojson: any) => void;
+  onGeoJsonSelect?: (geojson: FeatureCollection) => void;
 }) {
   const methods = useFormContext<SimuladorData>()
   const { register, formState: { errors }, watch } = methods

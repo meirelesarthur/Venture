@@ -2,10 +2,12 @@ import { useRef, useState } from 'react'
 import area from '@turf/area'
 import { Upload, FileCheck, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import type { FeatureCollection } from 'geojson'
 
 interface KmlUploaderProps {
-  onLoad: (result: { areaHa: number; geojson: any; fileName: string }) => void
+  onLoad: (result: { areaHa: number; geojson: FeatureCollection; fileName: string }) => void
   label?: string
+  className?: string
 }
 
 // Parser KML → GeoJSON usando DOMParser nativo (zero dependências extras)
@@ -67,7 +69,7 @@ function parseKml(kmlText: string): { coordinates: number[][][]; areaHa: number 
   }
 }
 
-export default function KmlUploader({ onLoad, label = 'Carregar KML da propriedade' }: KmlUploaderProps) {
+export default function KmlUploader({ onLoad, label = 'Carregar KML da propriedade', className }: KmlUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -105,10 +107,11 @@ export default function KmlUploader({ onLoad, label = 'Carregar KML da proprieda
 
   return (
     <div
-      className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
+      className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center
         ${dragging ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/50 hover:bg-accent/5'}
         ${status === 'ok' ? 'border-success/60 bg-success/5' : ''}
         ${status === 'error' ? 'border-danger/60 bg-danger/5' : ''}
+        ${className ?? ''}
       `}
       onDragOver={e => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}

@@ -189,7 +189,7 @@ export function AdminHistoricoTab({ fazendaId }: { fazendaId: string }) {
             <div className="grid sm:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Tipo de Ator</Label>
-                <Select value={filtroAtor} onValueChange={(v: any) => setFiltroAtor(v)}>
+                <Select value={filtroAtor} onValueChange={(v: string) => setFiltroAtor(v)}>
                   <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>

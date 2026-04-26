@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -45,13 +45,8 @@ export default function PecuariaForm({ talhaoIds, fazendaId, anoAgricola, locked
   const existente = manejo.find(m => m.talhaoId === primeiroTalhaoId && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
   const [registros, setRegistros] = useState<RegistroPecuaria[]>(existente?.pecuaria ?? [emptyAnimal()])
 
-  useEffect(() => {
-    const primeiroTalhaoId = talhaoIds[0]
-    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    setRegistros(m?.pecuaria && m.pecuaria.length > 0 ? m.pecuaria : [emptyAnimal()])
-  }, [talhaoIds, anoAgricola])
 
-  const update = (i: number, field: keyof RegistroPecuaria, value: any) => {
+  const update = <K extends keyof RegistroPecuaria>(i: number, field: K, value: RegistroPecuaria[K]) => {
     setRegistros(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
   }
 

@@ -40,6 +40,7 @@ const AdminMotor          = lazy(() => import('@/pages/admin/AdminMotor'))
 const AdminUsers          = lazy(() => import('@/pages/admin/AdminUsers'))
 const AdminFazendas       = lazy(() => import('@/pages/admin/AdminFazendas'))
 const AdminFazendaDetalhe = lazy(() => import('@/pages/admin/AdminFazendaDetalhe'))
+const AdminValidacaoMRV   = lazy(() => import('@/pages/admin/AdminValidacaoMRV'))
 
 function PageLoader() {
   return (
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/admin/motor/:fazendaId?"            element={<A roles={['admin']}><AdminMotor /></A>} />
           <Route path="/admin/fazendas"                     element={<A roles={['admin']}><AdminFazendas /></A>} />
           <Route path="/admin/fazendas/:fazendaId"          element={<A roles={['admin']}><AdminFazendaDetalhe /></A>} />
+          <Route path="/admin/validacao"                    element={<A roles={['admin']}><AdminValidacaoMRV /></A>} />
 
           {/* Redirect root */}
           <Route path="/" element={<Navigate to="/simulacao" replace />} />

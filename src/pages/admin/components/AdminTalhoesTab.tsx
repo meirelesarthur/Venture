@@ -9,27 +9,7 @@ import { useDataStore } from '@/store/data'
 import { Plus, CheckCircle2, XCircle, Leaf, Pencil, Save, Map, CloudRain, FlaskConical, Trash2, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import FazendaMap from '@/components/maps/FazendaMap'
-
-const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-const TEXTURAS = ['arenosa','franco-arenosa','franca','franco-argilosa','argilo-arenosa','argilosa','muito-argilosa']
-const TOPOGRAFIAS = ['plano','suave_ondulado','ondulado','forte_ondulado','montanhoso']
-const PRESETS: Record<string, { tempMensal: number[]; precipMensal: number[]; evapMensal: number[] }> = {
-  preset_cerrado: {
-    tempMensal:   [27.2, 27.0, 26.8, 26.5, 25.2, 24.1, 23.8, 25.0, 27.0, 27.5, 27.3, 27.1],
-    precipMensal: [230,  210,  200,  100,   30,   10,    5,   20,   80,  160,  210,  240],
-    evapMensal:   [100,   90,   95,  105,   95,   85,   90,  100,  110,  115,  105,  100],
-  },
-  preset_amazonia: {
-    tempMensal:   [26.5, 26.4, 26.2, 26.5, 27.0, 26.8, 26.5, 27.1, 27.5, 27.8, 27.6, 27.0],
-    precipMensal: [280,  280,  320,  300,  250,  100,   70,   60,   90,  150,  200,  280],
-    evapMensal:   [ 90,   80,   85,   90,   95,   90,   95,  100,  110,  115,  100,   95],
-  },
-  preset_pampa: {
-    tempMensal:   [24.0, 23.5, 21.0, 17.0, 13.0, 10.0,  9.5, 11.5, 14.5, 18.0, 21.0, 23.0],
-    precipMensal: [130,  110,  120,  100,   90,   90,  110,  100,  120,  110,  120,  130],
-    evapMensal:   [140,  120,   95,   70,   45,   30,   30,   40,   60,   90,  115,  135],
-  },
-}
+import { MESES, TEXTURAS, TOPOGRAFIAS, PRESETS } from '@/constants/climaticos'
 
 const SAFRA_ATUAL = new Date().getFullYear()
 
@@ -76,7 +56,12 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
 
   // ── Edição inline de solo ──────────────────────────────────────────────────
   const [editId, setEditId] = useState<string | null>(null)
-  const [editSolo, setEditSolo] = useState<{[k:string]: any}>({})
+  type EditSoloState = {
+    socPercent: number | string; bdGCm3: number | string; argilaPercent: number | string
+    profundidadeCm: number; pontosColetados: number
+    grupoSoloFao: string; texturaFao: string; topografia: string
+  }
+  const [editSolo, setEditSolo] = useState<Partial<EditSoloState>>({})
 
   const startEdit = (t: typeof meusTalhoes[0]) => {
     setEditId(t.id)
@@ -200,7 +185,7 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                <div className="space-y-1.5"><Label>Área (ha) *</Label><Input type="number" value={nt.areaHa || ''} onChange={e => setNt(p => ({...p, areaHa:Number(e.target.value)}))} className="rounded-xl" /></div>
                <div className="space-y-1.5">
                 <Label>Função</Label>
-                <Select value={nt.tipo} onValueChange={v => setNt(p => ({...p, tipo:v as any}))}>
+                <Select value={nt.tipo} onValueChange={v => setNt(p => ({...p, tipo: v as 'projeto' | 'control_site' | 'excluido'}))}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="projeto">Projeto</SelectItem><SelectItem value="control_site">Control Site</SelectItem></SelectContent>
                 </Select>

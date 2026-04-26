@@ -1,21 +1,20 @@
 import { useState } from 'react'
+import type React from 'react'
 import { cn } from '@/lib/utils'
-import { Map, Droplets, Settings2, FileText } from 'lucide-react'
-import KmlUploader from '@/components/maps/KmlUploader'
+import { Map, Droplets, Settings2, FileText, Info } from 'lucide-react'
 import FazendaMap from '@/components/maps/FazendaMap'
 import FertilizacaoForm from '@/pages/cliente/mrv/FertilizacaoForm'
 import OperacionalForm from '@/pages/cliente/mrv/OperacionalForm'
 import DocumentosForm from '@/pages/cliente/mrv/DocumentosForm'
 import { useDataStore } from '@/store/data'
-import { toast } from 'sonner'
 
 type FazendaSubTab = 'mapa' | 'fertilizacao' | 'maquinario' | 'evidencias'
 
-const SUBTABS: { id: FazendaSubTab; label: string; Icon: any }[] = [
-  { id: 'mapa',         label: 'Área & Mapa',    Icon: Map },
-  { id: 'fertilizacao', label: 'Fertilização',   Icon: Droplets },
-  { id: 'maquinario',  label: 'Maquinário',      Icon: Settings2 },
-  { id: 'evidencias',  label: 'Evidências',       Icon: FileText },
+const SUBTABS: { id: FazendaSubTab; label: string; Icon: React.ElementType }[] = [
+  { id: 'mapa',         label: 'Área & Mapa',  Icon: Map },
+  { id: 'fertilizacao', label: 'Fertilização', Icon: Droplets },
+  { id: 'maquinario',  label: 'Maquinário',    Icon: Settings2 },
+  { id: 'evidencias',  label: 'Evidências',    Icon: FileText },
 ]
 
 interface Props {
@@ -26,20 +25,13 @@ interface Props {
 
 export function MRVFazendaTab({ fazendaId, anoAgricola, talhaoIds }: Props) {
   const [sub, setSub] = useState<FazendaSubTab>('mapa')
-  const { fazendas, talhoes, updateFazenda } = useDataStore()
+  const { fazendas, talhoes } = useDataStore()
   const fazenda = fazendas.find(f => f.id === fazendaId)
   const projetoTalhoes = talhoes.filter(t => t.fazendaId === fazendaId && t.tipo === 'projeto')
 
-  const handleKmlLoad = (result: { areaHa: number; geojson: any; fileName: string }) => {
-    if (fazenda) {
-      updateFazenda(fazenda.id, { kmlGeoJson: result.geojson, areaTotalHa: result.areaHa })
-      toast.success(`KML carregado: ${result.areaHa.toFixed(1)} ha`)
-    }
-  }
-
   return (
     <div className="flex flex-col h-full">
-      {/* Sub-tabs L2 — underline style */}
+      {/* Sub-tabs L2 */}
       <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
         {SUBTABS.map(t => (
           <button
@@ -68,7 +60,27 @@ export function MRVFazendaTab({ fazendaId, anoAgricola, talhaoIds }: Props) {
               <h3 className="text-base font-bold mb-1">Área da Fazenda</h3>
               <p className="text-sm text-muted">Georreferenciamento e visualização dos talhões cadastrados.</p>
             </div>
-            <KmlUploader onLoad={handleKmlLoad} label="Carregar KML da fazenda" />
+
+            {/* KML info — somente leitura para o admin */}
+            {fazenda?.kmlGeoJson ? (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-success/5 border border-success/20 text-sm">
+                <Info size={14} className="text-success shrink-0" />
+                <div>
+                  <p className="font-medium text-success">KML carregado pelo produtor</p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {fazenda.areaTotalHa?.toFixed(1)} ha · o envio do arquivo é de responsabilidade do produtor.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/5 border border-border/50 text-sm">
+                <Info size={14} className="text-muted-foreground shrink-0" />
+                <p className="text-xs text-muted">
+                  O produtor ainda não enviou o KML da fazenda. O upload é de responsabilidade do próprio produtor via painel MRV.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-xl overflow-hidden border border-border/50">
               <FazendaMap talhoes={projetoTalhoes} height="320px" />
             </div>

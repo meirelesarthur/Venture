@@ -7,14 +7,14 @@ import { TrendingUp, Leaf, DollarSign, AlertCircle } from 'lucide-react'
 
 export default function ResultadosPage() {
   const { user } = useAuthStore()
-  const { resultadosMotor, talhoes, fazendas, parametros } = useDataStore()
+  const { resultadosMotor, talhoes, fazendas, clientes, parametros } = useDataStore()
 
   const getParam = (k: string) => parametros.find(p => p.chave === k)?.valor ?? 0
   const ptax     = getParam('ptax_fallback')
   const precoUsd = getParam('preco_base_usd')
 
-  // Talhões do cliente logado (fallback c1 para testes)
-  const fazenda = fazendas.find(f => f.produtorId === (user?.id ?? 'c1')) ?? fazendas[0]
+  const clienteAtual = clientes.find(c => c.userId === user?.id)
+  const fazenda = fazendas.find(f => f.produtorId === clienteAtual?.id) ?? fazendas[0]
   const meusTalhoes = talhoes.filter(t => t.fazendaId === fazenda?.id && t.tipo === 'projeto')
   const talhaoIds   = meusTalhoes.map(t => t.id)
 
@@ -141,7 +141,7 @@ export default function ResultadosPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip formatter={(v: any) => [`${Number(v).toLocaleString('pt-BR')} VCUs`, '']} />
+                  <Tooltip formatter={(v: number) => [`${v.toLocaleString('pt-BR')} VCUs`, '']} />
                   <Bar dataKey="vcus" fill="var(--color-success, #16A34A)" radius={[4,4,0,0]} name="VCUs" />
                 </BarChart>
               </ResponsiveContainer>
@@ -161,7 +161,7 @@ export default function ResultadosPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: any) => [`R$ ${Number(v).toLocaleString('pt-BR')}`, '']} />
+                  <Tooltip formatter={(v: number) => [`R$ ${v.toLocaleString('pt-BR')}`, '']} />
                   <Line type="monotone" dataKey="acumulado" stroke="var(--color-primary, #057A8F)" strokeWidth={2.5} dot={{ r: 3 }} name="Acumulado" />
                 </LineChart>
               </ResponsiveContainer>
@@ -190,7 +190,7 @@ export default function ResultadosPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-                    <Tooltip formatter={(v: any, name: string) => [`${Number(v).toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
+                    <Tooltip formatter={(v: number, name: string) => [`${v.toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
                     <Line type="monotone" dataKey="baseline" stroke="var(--color-muted-foreground, #9CA3AF)" strokeWidth={2} strokeDasharray="5 3" dot={false} name="baseline" />
                     <Line type="monotone" dataKey="projeto"   stroke="var(--color-success, #16A34A)"         strokeWidth={2.5} dot={{ r: 3 }}               name="projeto"   />
                   </LineChart>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -68,23 +68,15 @@ export default function FertilizacaoForm({ talhaoIds, fazendaId, anoAgricola, lo
     input.click()
   }
 
-  useEffect(() => {
-    const primeiroTalhaoId = talhaoIds[0]
-    const m = manejo.find(x => x.talhaoId === primeiroTalhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
-    setSint(m?.fertilizantesSint ?? [{ tipo: '', qtdKgHa: 0, usaInibidor: false }])
-    setOrg(m?.fertilizantesOrg ?? [])
-    setCalc(m?.calcario ?? [])
-    setBiologicos(m?.produtosBiologicos ?? [])
-  }, [talhaoIds, anoAgricola])
 
   const totalN = sint.reduce((acc, f) => acc + (NC_SF[f.tipo] ?? 0) * f.qtdKgHa, 0)
   const estimatedN2O = +(totalN * 0.0047 * 44 / 28).toFixed(2) // kg N2O/ha → tCO2e/ha aproximado
 
-  const updateSint = (i: number, f: keyof FertilizanteSint, v: any) =>
+  const updateSint = <K extends keyof FertilizanteSint>(i: number, f: K, v: FertilizanteSint[K]) =>
     setSint(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
-  const updateOrg  = (i: number, f: keyof FertilizanteOrg, v: any)  =>
+  const updateOrg  = <K extends keyof FertilizanteOrg>(i: number, f: K, v: FertilizanteOrg[K]) =>
     setOrg (prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
-  const updateCalc = (i: number, f: keyof Calcario, v: any)           =>
+  const updateCalc = <K extends keyof Calcario>(i: number, f: K, v: Calcario[K]) =>
     setCalc(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r))
 
   const handleSave = () => {

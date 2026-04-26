@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,11 +7,13 @@ import {
   Users, Map, CheckCircle2, Clock, ArrowRight,
   Cpu, Building2, Settings
 } from 'lucide-react'
+import BrasilFazendasMap from '@/components/maps/BrasilFazendasMap'
 
 export default function AdminDashboard() {
-  const { leads, clientes, parceiros, controlSites, manejo, fazendas } = useDataStore()
+  const navigate = useNavigate()
+  const { leads, clientes, parceiros, controlSites, manejo, fazendas, talhoes } = useDataStore()
 
-  const leadsNovos = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
+  const leadsNovos  = leads.filter(l => l.status === 'novo' || l.status === 'em_analise').length
   const mrvPendente = manejo.filter(m => m.status === 'pendente').length
 
   return (
@@ -26,13 +28,13 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* KPIs */}
+      {/* ── KPIs ──────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Clientes Ativos', value: clientes.length, sub: 'Produtores com MRV em andamento', Icon: Users, color: 'text-primary', bg: '' },
-          { label: 'Parceiros', value: parceiros.filter(p=>p.status==='ativo').length, sub: 'Consultores com leads convertidos', Icon: Users, color: 'text-success', bg: 'bg-success/5 border-success/20' },
-          { label: 'Control Sites', value: controlSites.length, sub: `${controlSites.filter(s=>s.similaridade<9).length} em alerta de similaridade`, Icon: Map, color: 'text-warning', bg: 'bg-warning/5 border-warning/20' },
-          { label: 'Validação Pendente', value: mrvPendente, sub: 'Lotes MRV aguardando revisão', Icon: Clock, color: 'text-danger', bg: 'bg-danger/5 border-danger/20' },
+          { label: 'Clientes Ativos',    value: clientes.length,                                                      sub: 'Produtores com MRV em andamento',    Icon: Users,  color: 'text-primary',  bg: '' },
+          { label: 'Parceiros',          value: parceiros.filter(p => p.status === 'ativo').length,                   sub: 'Consultores com leads convertidos',  Icon: Users,  color: 'text-success',  bg: 'bg-success/5 border-success/20' },
+          { label: 'Control Sites',      value: controlSites.length,                                                  sub: `${controlSites.filter(s => s.similaridade < 9).length} em alerta de similaridade`, Icon: Map, color: 'text-warning', bg: 'bg-warning/5 border-warning/20' },
+          { label: 'Validação Pendente', value: mrvPendente,                                                          sub: 'Lotes MRV aguardando revisão',       Icon: Clock,  color: 'text-danger',   bg: 'bg-danger/5 border-danger/20' },
         ].map(kpi => (
           <Card key={kpi.label} className={`border-border/50 shadow-sm bg-surface ${kpi.bg}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -47,12 +49,26 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* ── Brazil farms map ──────────────────────────────────────────────────── */}
+      <div className="rounded-2xl overflow-hidden border border-border/40 shadow-sm">
+        <BrasilFazendasMap
+          fazendas={fazendas}
+          talhoes={talhoes}
+          clientes={clientes}
+          height="442px"
+          onFazendaClick={id => navigate(`/admin/fazendas/${id}`)}
+        />
+      </div>
+
+      {/* ── Leads + Fila de Validação ─────────────────────────────────────────── */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Leads em análise */}
         <Card className="border-border/50 shadow-sm bg-surface">
           <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
             <CardTitle className="text-lg">Leads para Análise ({leadsNovos})</CardTitle>
-            <Button variant="ghost" size="sm" className="rounded-lg cursor-default hover:bg-transparent">Ver todos <ArrowRight size={14} /></Button>
+            <Button asChild variant="ghost" size="sm" className="rounded-lg gap-1">
+              <Link to="/admin/leads">Ver todos <ArrowRight size={13} /></Link>
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/50">
@@ -67,7 +83,9 @@ export default function AdminDashboard() {
                   </Badge>
                 </div>
               ))}
-              {leadsNovos === 0 && <div className="text-center py-8 text-muted text-sm">Nenhum lead pendente.</div>}
+              {leadsNovos === 0 && (
+                <div className="text-center py-8 text-muted text-sm">Nenhum lead pendente.</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -76,18 +94,20 @@ export default function AdminDashboard() {
         <Card className="border-border/50 shadow-sm bg-surface">
           <CardHeader className="border-b bg-surface/50 pb-4 flex-row items-center justify-between">
             <CardTitle className="text-lg">Fila de Validação MRV</CardTitle>
-            <Button variant="ghost" size="sm" className="rounded-lg cursor-default hover:bg-transparent">Ver fila <ArrowRight size={14} /></Button>
+            <Button asChild variant="ghost" size="sm" className="rounded-lg gap-1">
+              <Link to="/admin/validacao">Ver fila <ArrowRight size={13} /></Link>
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/50">
               {manejo.filter(m => m.status === 'pendente' || m.status === 'correcao').slice(0, 4).map(m => {
-                const talhao = useDataStore.getState().talhoes.find(t => t.id === m.talhaoId)
+                const talhao  = useDataStore.getState().talhoes.find(t => t.id === m.talhaoId)
                 const fazenda = fazendas.find(f => f.id === talhao?.fazendaId)
                 return (
                   <div key={m.id} className="flex items-center justify-between px-5 py-3">
                     <div>
                       <p className="text-sm font-medium text-foreground">{fazenda?.nome ?? 'Fazenda'}</p>
-                      <p className="text-xs text-muted">{talhao?.nome} | Safra {m.anoAgricola}/{m.anoAgricola+1} | {m.cultura ?? '—'}</p>
+                      <p className="text-xs text-muted">{talhao?.nome} | Safra {m.anoAgricola}/{m.anoAgricola + 1} | {m.cultura ?? '—'}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={`text-xs shadow-none ${m.status === 'pendente' ? 'bg-warning/10 text-warning border-warning/20' : 'bg-danger/10 text-danger border-danger/20'}`}>
@@ -110,17 +130,17 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Atalhos Admin */}
+      {/* ── Atalhos Admin ─────────────────────────────────────────────────────── */}
       <div className="grid sm:grid-cols-3 gap-4">
         {[
-          { label: 'Gestão de Fazendas', desc: 'Cadastrar e editar talhões, dados de solo', icon: Building2, href: '/admin/fazendas', color: 'text-primary' },
-          { label: 'Motor de Cálculos', desc: 'Executar RothC e QA3 por propriedade', icon: Cpu, href: '/admin/motor/f1', color: 'text-warning' },
-          { label: 'Parâmetros Globais', desc: 'PTAX, preço VCU, taxas e fatores globais', icon: Settings, href: '/admin/parametros', color: 'text-success' },
+          { label: 'Gestão de Fazendas',  desc: 'Cadastrar e editar talhões, dados de solo', icon: Building2, href: '/admin/fazendas',    color: 'text-primary' },
+          { label: 'Motor de Cálculos',   desc: 'Executar RothC e QA3 por propriedade',      icon: Cpu,       href: '/admin/motor/f1',    color: 'text-warning' },
+          { label: 'Parâmetros Globais',  desc: 'PTAX, preço VCU, taxas e fatores globais',  icon: Settings,  href: '/admin/parametros',  color: 'text-success' },
         ].map(card => (
           <Link key={card.label} to={card.href} className="block group">
             <Card className="border-border/50 shadow-sm group-hover:border-primary/50 group-hover:shadow-md group-hover:-translate-y-0.5 transition-all duration-200 bg-surface h-full cursor-pointer">
               <CardContent className="p-5 flex items-start gap-4 h-full">
-                <div className={`h-10 w-10 rounded-xl bg-background flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-colors`}>
+                <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 transition-colors">
                   <card.icon size={20} className={card.color} />
                 </div>
                 <div className="flex-1 min-w-0">

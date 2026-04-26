@@ -4,30 +4,50 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDataStore } from '@/store/data'
 import { useAuthStore } from '@/store/auth'
-import { Users, Map, DollarSign, Trophy, TrendingUp, ArrowRight, Eye, EyeOff, HelpCircle, Star, Send } from 'lucide-react'
+import { Users, Map, DollarSign, Trophy, TrendingUp, ArrowRight, Eye, EyeOff, HelpCircle, Star, Send, Sparkles, X } from 'lucide-react'
+
+// ── Dados demo para o modo de prévia ─────────────────────────────────────────
+
+const DEMO_LEADS = [
+  { id: 'd1', nome: 'João Mendonça', fazenda: 'Faz. Boa Esperança', area: 480, status: 'contratado', data: '12/01/2025' },
+  { id: 'd2', nome: 'Maria Cristina', fazenda: 'Faz. Santa Fé', area: 320, status: 'aprovado', data: '03/02/2025' },
+  { id: 'd3', nome: 'Carlos Albuquerque', fazenda: 'Faz. Três Irmãos', area: 650, status: 'em_analise', data: '18/03/2025' },
+  { id: 'd4', nome: 'Ana Rodrigues', fazenda: 'Sítio Novo Horizonte', area: 150, status: 'efetivado', data: '25/03/2025' },
+]
+const DEMO_TOTAL_PAGO = 12430
+const DEMO_TOTAL_PROJETADO = 38200
+const DEMO_HECTARES = 1600
+const DEMO_RANKING = 3
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ParceiroDashboard() {
   const { leads, comissoes, parceiros } = useDataStore()
   const { user } = useAuthStore()
   const [showValues, setShowValues] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
 
-  // Para o parceiro mock (carlos-1 = parceiro-1 = p1)
-  const parceiroId = 'p1'
-  const parceiroAtual = parceiros.find(p => p.id === parceiroId)
+  const parceiroAtual = parceiros.find(p => p.userId === user?.id)
+  const parceiroId = parceiroAtual?.id ?? ''
   const comissaoPercentual = parceiroAtual?.comissaoPercentual ?? 100
 
-  const meusLeads = leads.filter(l => l.parceiroId === parceiroId)
-  const minhasComissoes = comissoes.filter(c => c.parceiroId === parceiroId)
-  const totalPago = minhasComissoes.filter(c => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
-  const totalProjetado = minhasComissoes.filter(c => c.status === 'projetado').reduce((a, c) => a + c.valor, 0)
-  const hectares = meusLeads.filter(l => l.status !== 'recusado').reduce((a, l) => a + l.area, 0)
-  const convertidos = meusLeads.filter(l => l.status === 'contratado' || l.status === 'efetivado').length
+  const meusLeadsReal = leads.filter(l => l.parceiroId === parceiroId)
+  const minhasComissoesReal = comissoes.filter(c => c.parceiroId === parceiroId)
 
-  // Ranking mock — parceiro no pos 1
+  // Em modo demo usa dados fictícios, caso contrário usa dados reais
+  const meusLeads = previewMode ? DEMO_LEADS : meusLeadsReal
+  const totalPago = previewMode ? DEMO_TOTAL_PAGO : minhasComissoesReal.filter(c => c.status === 'pago').reduce((a, c) => a + c.valor, 0)
+  const totalProjetado = previewMode ? DEMO_TOTAL_PROJETADO : minhasComissoesReal.filter(c => c.status === 'projetado').reduce((a, c) => a + c.valor, 0)
+  const hectares = previewMode ? DEMO_HECTARES : meusLeadsReal.filter(l => l.status !== 'recusado').reduce((a, l) => a + l.area, 0)
+  const convertidos = previewMode
+    ? DEMO_LEADS.filter(l => l.status === 'contratado' || l.status === 'efetivado').length
+    : meusLeadsReal.filter(l => l.status === 'contratado' || l.status === 'efetivado').length
+
+  // Ranking
   const ranking = parceiros
     .map(p => ({ ...p, score: p.hectaresCarteira ?? 0 }))
     .sort((a, b) => b.score - a.score)
-  const myPos = ranking.findIndex(p => p.id === parceiroId) + 1
+  const myPos = previewMode ? DEMO_RANKING : ranking.findIndex(p => p.id === parceiroId) + 1
 
   const NIVEIS = [
     { nome: 'Bronze',  min: 0,     max: 5000,  color: 'text-yellow-700',  bg: 'bg-yellow-700/10 border-yellow-700/20' },
@@ -46,7 +66,8 @@ export default function ParceiroDashboard() {
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
-  if (meusLeads.length === 0) {
+  // Tela vazia
+  if (meusLeadsReal.length === 0 && !previewMode) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -71,23 +92,54 @@ export default function ParceiroDashboard() {
             </div>
           ))}
         </div>
-        <Button asChild className="gap-2 rounded-xl px-8 h-12 shadow-lg">
-          <Link to="/parceiro/leads/novo"><Users size={16} /> Indicar Primeiro Produtor</Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <Button asChild className="gap-2 rounded-xl px-8 h-12 shadow-lg">
+            <Link to="/parceiro/leads/novo"><Users size={16} /> Indicar Primeiro Produtor</Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => { setPreviewMode(true); setShowValues(true) }}
+            className="gap-2 rounded-xl px-6 h-12 border-primary/30 text-primary hover:bg-primary/5"
+          >
+            <Sparkles size={16} /> Ver tela preenchida
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* Banner de modo demo */}
+      {previewMode && (
+        <div className="flex items-center justify-between gap-3 bg-primary/10 border border-primary/25 text-primary rounded-xl px-4 py-3 text-sm font-medium animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="shrink-0" />
+            <span>Você está visualizando uma prévia com dados de exemplo — não são seus dados reais.</span>
+          </div>
+          <button
+            onClick={() => setPreviewMode(false)}
+            className="shrink-0 p-1 rounded-lg hover:bg-primary/10 transition-colors"
+            title="Fechar prévia"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Painel do Parceiro</h1>
-          <p className="text-muted">Bem-vindo, {user?.name}. Desempenho da sua carteira.</p>
+          <p className="text-muted">
+            {previewMode ? 'Exemplo de como ficará seu painel.' : `Bem-vindo, ${user?.name}. Desempenho da sua carteira.`}
+          </p>
         </div>
-        <Button asChild className="gap-2 rounded-xl">
-          <Link to="/parceiro/leads/novo"><Users size={16} /> Indicar Produtor</Link>
-        </Button>
+        {!previewMode && (
+          <Button asChild className="gap-2 rounded-xl">
+            <Link to="/parceiro/leads/novo"><Users size={16} /> Indicar Produtor</Link>
+          </Button>
+        )}
       </div>
 
       {/* KPIs */}
@@ -112,12 +164,11 @@ export default function ParceiroDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Nível + tabela de níveis compacta */}
+        {/* Nível */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Seu Nível: <span className={nivelAtual.color}>{nivelAtual.nome}</span></CardTitle>
-              {/* Tabela de níveis compacta inline */}
               <div className="relative group">
                 <button className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors">
                   <HelpCircle size={14} /> Níveis
@@ -173,7 +224,6 @@ export default function ParceiroDashboard() {
                   {showValues ? <EyeOff size={14} /> : <Eye size={14} />}
                   {showValues ? 'Ocultar' : 'Mostrar'}
                 </button>
-                {/* Tooltip regras */}
                 <div className="relative group">
                   <HelpCircle size={14} className="text-muted cursor-help" />
                   <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-border rounded-xl shadow-lg p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -199,9 +249,11 @@ export default function ParceiroDashboard() {
                 <p className={`text-xl font-bold text-primary ${!showValues ? 'value-masked' : ''}`}>{formatValue(totalProjetado)}</p>
               </div>
             </div>
-            <Button variant="outline" asChild className="w-full rounded-xl gap-2">
-              <Link to="/parceiro/comissoes">Ver Extrato Completo <ArrowRight size={14} /></Link>
-            </Button>
+            {!previewMode && (
+              <Button variant="outline" asChild className="w-full rounded-xl gap-2">
+                <Link to="/parceiro/comissoes">Ver Extrato Completo <ArrowRight size={14} /></Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -233,6 +285,24 @@ export default function ParceiroDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* CTA para sair do modo demo */}
+      {previewMode && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface border border-border/50 rounded-2xl px-6 py-5 animate-in fade-in duration-300">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Gostou do que viu?</p>
+            <p className="text-xs text-muted mt-0.5">Indique seu primeiro produtor e comece a construir sua carteira real.</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setPreviewMode(false)} className="rounded-xl gap-1.5">
+              <X size={13} /> Fechar prévia
+            </Button>
+            <Button asChild size="sm" className="gap-2 rounded-xl">
+              <Link to="/parceiro/leads/novo"><Users size={14} /> Indicar Produtor</Link>
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

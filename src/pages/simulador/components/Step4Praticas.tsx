@@ -7,33 +7,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { SimuladorData } from '../schema'
-import { ArrowRight, ArrowLeft, TrendingUp, Wifi, WifiOff } from 'lucide-react'
+import { ArrowRight, ArrowLeft, TrendingUp, RadioTower, AlertCircle } from 'lucide-react'
 import { useDataStore } from '@/store/data'
-
-const PRATICAS_LIST = [
-  { id: 'plantio_direto', label: 'Plantio Direto (SPD)',       desc: 'Zero revolvimento do solo' },
-  { id: 'cobertura',      label: 'Plantas de Cobertura',       desc: 'Braquiária, crotalária...' },
-  { id: 'rotacao',        label: 'Rotação Complexa',           desc: 'Diversificação com leguminosas' },
-  { id: 'ilpf',           label: 'ILP/ILPF',                   desc: 'Integração Lavoura-Pecuária-Floresta' },
-  { id: 'pastagem',       label: 'Reforma de Pastagem',        desc: 'Recuperação com adição de C' },
-  { id: 'organico',       label: 'Fertilizantes Orgânicos',    desc: 'Substituição parcial de NPK' },
-  { id: 'biologicos',     label: 'Insumos Biológicos',         desc: 'Fixadores de N / P' },
-  { id: 'rotac_pasto',    label: 'Manejo Rotacionado',         desc: 'Pastejo Racional Voisin' },
-]
-
-const PRATICA_PARAM: Record<string, string> = {
-  plantio_direto: 'soc_fator_spdpd',
-  cobertura:      'soc_fator_cobertura',
-  rotacao:        'soc_fator_rotacao',
-  ilpf:           'soc_fator_ilpf',
-  pastagem:       'soc_fator_pastagem',
-  organico:       'soc_fator_org',
-  biologicos:     'soc_fator_biologicos',
-  rotac_pasto:    'soc_fator_rotac_past',
-}
-
-const BUFFER_POOL = 0.15
-const PTAX_FALLBACK = 5.65
+import { PRATICA_PARAM, BUFFER_POOL, PTAX_FALLBACK, PRATICAS_LIST, SOC_FATOR_FALLBACK, PRATICA_SECUNDARIA_MULT } from '@/constants/simulador'
 
 async function fetchPtax(): Promise<{ valor: number; estimado: boolean }> {
   try {
@@ -78,7 +54,7 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
   const fatores = useMemo(() => {
     const result: Record<string, number> = {}
     for (const [id, chave] of Object.entries(PRATICA_PARAM)) {
-      result[id] = getParam(chave) || 0.5
+      result[id] = getParam(chave) || SOC_FATOR_FALLBACK
     }
     return result
   }, [getParam])
@@ -87,8 +63,8 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
     if (!praticas.length || !areaHa) return null
     const anos = parseInt(horizonte || '10', 10)
     const preco_brl = preco_base_usd * ptax
-    const valores = praticas.map((p: string) => fatores[p] || 0.5).sort((a: number, b: number) => b - a)
-    const fC = valores[0] + 0.3 * valores.slice(1).reduce((a: number, b: number) => a + b, 0)
+    const valores = praticas.map((p: string) => fatores[p] || SOC_FATOR_FALLBACK).sort((a: number, b: number) => b - a)
+    const fC = valores[0] + PRATICA_SECUNDARIA_MULT * valores.slice(1).reduce((a: number, b: number) => a + b, 0)
     const tco2e_ano = areaHa * fC
     const receita_anual = tco2e_ano * preco_brl * (1 - BUFFER_POOL)
     return {
@@ -156,8 +132,8 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
             <div className="ml-auto">
               {ptaxLoading ? <span className="text-[10px] text-muted animate-pulse">Buscando PTAX...</span>
                 : ptaxEstimado
-                  ? <Badge className="bg-warning/10 text-warning border-warning/20 shadow-none text-[10px]"><WifiOff size={8} className="mr-1" /> Estimado</Badge>
-                  : <Badge className="bg-success/10 text-success border-success/20 shadow-none text-[10px]"><Wifi size={8} className="mr-1" /> Cotação hoje</Badge>}
+                  ? <Badge className="bg-warning/10 text-warning border-warning/20 shadow-none text-[10px]"><AlertCircle size={8} className="mr-1" /> Estimado</Badge>
+                  : <Badge className="bg-success/10 text-success border-success/20 shadow-none text-[10px]"><RadioTower size={8} className="mr-1" /> Cotação hoje</Badge>}
             </div>
           </div>
           {!calculo
