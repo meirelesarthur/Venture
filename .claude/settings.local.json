@@ -18,7 +18,12 @@
       "Bash(npx shadcn@latest add resizable --yes)",
       "Bash(node -e \"console.log\\(require\\('./node_modules/maplibre-gl/package.json'\\).version\\)\")",
       "Bash(npx vite *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr *)",
+      "Bash(git commit -m 'fix: cast GeoJSON literal types in KmlUploader to satisfy FeatureCollection *)",
+      "Bash(git rm *)"
     ]
   }
 }
