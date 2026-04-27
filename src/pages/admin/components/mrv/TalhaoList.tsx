@@ -101,10 +101,10 @@ export function TalhaoList({ talhoes, selectedIds, onToggleCheck, onRowClick, on
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 py-3 border-b border-border/50 bg-surface/20 shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-bold">Talhões ({talhoes.length})</h3>
-          <Button size="sm" variant="outline" onClick={onAddClick} className="gap-1 h-7 text-xs rounded-lg">
-            <Plus size={12} /> Novo Talhão
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h3 className="text-sm font-bold truncate">Talhões ({talhoes.length})</h3>
+          <Button size="sm" variant="outline" onClick={onAddClick} className="gap-1 h-7 text-xs rounded-lg shrink-0">
+            <Plus size={12} /> Novo
           </Button>
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
@@ -147,18 +147,18 @@ export function TalhaoList({ talhoes, selectedIds, onToggleCheck, onRowClick, on
                   className="w-3.5 h-3.5 rounded accent-teal-600 cursor-pointer"
                 />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-1.5">
                   <span className="text-sm font-medium truncate">{t.nome}</span>
                   {t.dadosValidados
                     ? <CheckCircle2 size={12} className="text-green-600 shrink-0" />
                     : <XCircle size={12} className="text-gray-300 shrink-0" />
                   }
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className="text-[11px] text-muted">{t.areaHa} ha</span>
-                  <span className="text-muted text-[11px]">·</span>
-                  <TalhaoTypeBadge tipo={t.tipo} />
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[11px] text-muted truncate">{t.areaHa} ha</span>
+                  <span className="text-muted text-[11px] shrink-0">·</span>
+                  <span className="truncate"><TalhaoTypeBadge tipo={t.tipo} /></span>
                 </div>
               </div>
             </div>

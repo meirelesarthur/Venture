@@ -77,9 +77,8 @@ export function TalhoesTab({ fazendaId, anoAgricola }: TalhoesTabProps) {
       {/* Left panel — talhão list */}
       <ResizablePanel
         defaultSize={30}
-        minSize={25}
+        minSize="150px"
         maxSize={60}
-        style={{ minWidth: '150px' }}
         className="flex flex-col overflow-hidden border-r border-border/50"
       >
         {showAdd && (
