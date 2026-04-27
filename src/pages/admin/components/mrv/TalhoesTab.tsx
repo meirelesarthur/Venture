@@ -71,13 +71,13 @@ export function TalhoesTab({ fazendaId, anoAgricola }: TalhoesTabProps) {
 
   return (
     <ResizablePanelGroup
-      orientation="horizontal"
+      direction="horizontal"
       className="flex-1 overflow-hidden min-h-0"
     >
       {/* Left panel — talhão list */}
       <ResizablePanel
-        defaultSize={42}
-        minSize={28}
+        defaultSize={30}
+        minSize={25}
         maxSize={60}
         className="flex flex-col overflow-hidden border-r border-border/50"
       >
@@ -97,7 +97,7 @@ export function TalhoesTab({ fazendaId, anoAgricola }: TalhoesTabProps) {
       <ResizableHandle withHandle />
 
       {/* Right panel — detail / bulk edit */}
-      <ResizablePanel defaultSize={58} minSize={40} className="flex flex-col overflow-hidden">
+      <ResizablePanel defaultSize={70} minSize={40} className="flex flex-col overflow-hidden">
         {selectedIds.length === 0 && (
           <div className="flex-1 flex items-center justify-center h-full">
             <div className="text-center max-w-xs space-y-2 px-6">
