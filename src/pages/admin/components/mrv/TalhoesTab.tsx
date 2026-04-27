@@ -71,7 +71,7 @@ export function TalhoesTab({ fazendaId, anoAgricola }: TalhoesTabProps) {
 
   return (
     <ResizablePanelGroup
-      direction="horizontal"
+      orientation="horizontal"
       className="flex-1 overflow-hidden min-h-0"
     >
       {/* Left panel — talhão list */}
