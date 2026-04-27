@@ -74,7 +74,7 @@ export default function SimuladorPage() {
 
   const draft = getSessionDraft()
   const methods = useForm<SimuladorData>({
-    resolver: zodResolver(simuladorSchema),
+    resolver: zodResolver(simuladorSchema) as any,
     defaultValues: draft ?? {
       localizacao: { fazenda: '', estado: '', municipio: '' },
       lead: { nome: '', email: '', telefone: '' },
@@ -155,7 +155,7 @@ export default function SimuladorPage() {
           <SimuladorMap
             center={mapCenter}
             zoom={mapZoom}
-            geojson={mapGeoJson}
+            geojson={mapGeoJson ?? undefined}
             onMove={handleMapMove}
           />
         </div>

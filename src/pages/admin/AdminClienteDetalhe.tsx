@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useDataStore } from '@/store/data'
 import { ArrowLeft, Map, Factory, ExternalLink, MessageCircle, CheckCircle2 } from 'lucide-react'
-import type { MrvStatus } from '@/store/data'
 import { toast } from 'sonner'
 import { MrvStatusBadge } from '@/components/ui/mrv-status-badge'
 

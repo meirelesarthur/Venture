@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { Map, useMap, MapControls } from '@/components/ui/map'
 import maplibregl from 'maplibre-gl'
 import type { StyleSpecification, GeoJSONSource } from 'maplibre-gl'
-import type { GeoJSON } from 'geojson'
 
 const satelliteStyle: StyleSpecification = {
   version: 8,

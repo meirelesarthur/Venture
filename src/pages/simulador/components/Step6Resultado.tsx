@@ -121,7 +121,7 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
               <Tooltip
                 cursor={{ fill: 'var(--color-accent)', opacity: 0.05 }}
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)', fontSize: '11px', padding: '6px' }}
-                formatter={(val: number) => [fmt(val), 'Acumulado']}
+                formatter={(val: unknown) => [fmt(val as number), 'Acumulado']}
                 labelStyle={{ fontWeight: 'bold', color: 'var(--color-foreground)' }}
               />
               <Area type="stepAfter" dataKey="lucroAcumulado" stroke="var(--color-success)" strokeWidth={2} fill="url(#colorLucro)"

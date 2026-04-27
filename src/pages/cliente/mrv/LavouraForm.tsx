@@ -133,7 +133,7 @@ export default function LavouraForm({ talhaoIds, fazendaId, anoAgricola, locked 
                       onChange={e => handleUpdateCultura(cultura.id, 'produtividade', Number(e.target.value))} disabled={locked}
                       className="rounded-xl flex-1"
                     />
-                    <Select value={cultura.unidadeProd || 'sacas_ha'} onValueChange={v => handleUpdateCultura(cultura.id, 'unidadeProd', v)} disabled={locked}>
+                    <Select value={cultura.unidadeProd || 'sacas_ha'} onValueChange={v => handleUpdateCultura(cultura.id, 'unidadeProd', v as 'sacas_ha' | 't_ha')} disabled={locked}>
                       <SelectTrigger className="w-24 rounded-xl px-2"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="sacas_ha">sc/ha</SelectItem>

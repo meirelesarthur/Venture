@@ -248,9 +248,9 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                       <>
                         <td className="p-1.5"><Input type="number" step="0.1" value={editSolo.socPercent} onChange={e => setEditSolo(p=>({...p,socPercent:e.target.value}))} className="w-20 h-8" /></td>
                         <td className="p-1.5"><Input type="number" step="0.01" value={editSolo.bdGCm3} onChange={e => setEditSolo(p=>({...p,bdGCm3:e.target.value}))} className="w-20 h-8" /></td>
-                        <td className="p-1.5"><Input type="number" min={0} value={editSolo.pontosColetados} onChange={e => setEditSolo(p=>({...p,pontosColetados:e.target.value}))} className="w-20 h-8" /></td>
+                        <td className="p-1.5"><Input type="number" min={0} value={editSolo.pontosColetados} onChange={e => setEditSolo(p=>({...p,pontosColetados:Number(e.target.value)}))} className="w-20 h-8" /></td>
                         <td className="p-1.5"><Input type="number" value={editSolo.argilaPercent} onChange={e => setEditSolo(p=>({...p,argilaPercent:e.target.value}))} className="w-20 h-8" /></td>
-                        <td className="p-1.5"><Input type="number" value={editSolo.profundidadeCm} onChange={e => setEditSolo(p=>({...p,profundidadeCm:e.target.value}))} className="w-20 h-8" /></td>
+                        <td className="p-1.5"><Input type="number" value={editSolo.profundidadeCm} onChange={e => setEditSolo(p=>({...p,profundidadeCm:Number(e.target.value)}))} className="w-20 h-8" /></td>
                       </>
                     ) : (
                       <>

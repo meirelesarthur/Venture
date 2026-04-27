@@ -14,7 +14,7 @@ import { rodarMatching } from '@/motor/matchingControlSite'
 import { toast } from 'sonner'
 import { useState } from 'react'
 import { ScoreBar } from '@/components/ui/score-bar'
-import { CritBadge } from '@/components/ui/crit-badge'
+import { Badge } from '@/components/ui/badge'
 
 function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
   return (

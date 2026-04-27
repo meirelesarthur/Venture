@@ -41,7 +41,7 @@ export function Step2Area({
   onNext, 
   onPrev, 
   onMapEditToggle, 
-  onLocationSelect,
+  onLocationSelect: _onLocationSelect,
   onGeoJsonSelect
 }: { 
   onNext: () => void; 

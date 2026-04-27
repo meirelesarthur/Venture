@@ -70,8 +70,8 @@ interface CreditosIntermediarios {
   parcelasER: ParcelaER[]; erTBruto: number; uncCo2: number; uncN2o: number
   deltaCO2SocNet: number; iSinal: number; crTBruto: number
   uncCo2AplicadaCR: number; fpdsUsado: number; hasPecuariaLeakage: boolean
-  lkDetalhado: Record<string, number>; deducaoUncCO2: number
-  deducaoUncN2O: number; errNetStep: number; vcusStep: number
+  lkDetalhado: string; deducaoUncCO2: number
+  deducaoUncN2O: number; errNetStep: string; vcusStep: string
 }
 
 export interface DetalhesCalculo {
@@ -307,7 +307,7 @@ export async function rodarMotorCompleto(
         iom:          resultBase.intermediarios.iomTcHa,
         socAtivo:     resultBase.intermediarios.socAtivoTcHa,
         inputC:       resultBase.intermediarios.inputCTcHaAno,
-        hiUsado:      resultBase.intermediarios.hiUsado,
+        hiUsado:      resultBase.intermediarios.hiUsado ?? 0,
         raizPa:       resultBase.intermediarios.raizPaUsado,
         bioAerea:     resultBase.intermediarios.bioAereaTHa,
         bioRaiz:      resultBase.intermediarios.bioRaizTHa,
@@ -343,7 +343,7 @@ export async function rodarMotorCompleto(
         iom:          resultProj.intermediarios.iomTcHa,
         socAtivo:     resultProj.intermediarios.socAtivoTcHa,
         inputC:       resultProj.intermediarios.inputCTcHaAno,
-        hiUsado:      resultProj.intermediarios.hiUsado,
+        hiUsado:      resultProj.intermediarios.hiUsado ?? 0,
         raizPa:       resultProj.intermediarios.raizPaUsado,
         bioAerea:     resultProj.intermediarios.bioAereaTHa,
         bioRaiz:      resultProj.intermediarios.bioRaizTHa,
@@ -395,7 +395,7 @@ export async function rodarMotorCompleto(
         efEsterco:         n2oProj.efEstercoUsado,
         n2oEsterco:        n2oProj.n2oEstercoTco2eHa,
         bioMassaLeg:       n2oProj.bioMassaLeguminosa,
-        nContent:          n2oProj.nContentCultura,
+        nContent:          n2oProj.nContentCultura ?? 0,
         fCrBnf:            n2oProj.fCrBnfKgNHa,
         efBnf:             n2oProj.efBnfUsado,
         n2oBnf:            n2oProj.n2oBnfTco2eHa,

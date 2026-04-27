@@ -42,7 +42,7 @@ export function BulkEditPanel({ selectedIds, talhoes, fazendaId: _fazendaId, ano
   })
 
   const handleSave = () => {
-    selectedIds.forEach((tId, i) => {
+    selectedIds.forEach((_tId, i) => {
       const m = manejoRecords[i]
       if (!m) return
       const changes: Record<string, unknown> = {}

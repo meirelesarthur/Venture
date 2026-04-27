@@ -26,7 +26,7 @@ export default function RecuperarSenhaPage() {
     resolver: zodResolver(recoverySchema),
   })
 
-  const onSubmit = async (data: RecoveryForm) => {
+  const onSubmit = async (_data: RecoveryForm) => {
     setIsLoading(true)
     // Simulate API call
     setTimeout(() => {

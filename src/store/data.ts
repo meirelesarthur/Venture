@@ -16,7 +16,7 @@ export type {
 } from './types'
 
 import type {
-  LeadStatus, MrvStatus,
+  LeadStatus,
   Lead, Fazenda, Talhao, DadosManejoAnual, Cliente, Comissao,
   ControlSite, MatchResult, Parceiro, ColetaSolo, EventoHistorico,
   ParametroSistema, ResultadoMotor, DadoClimatico,

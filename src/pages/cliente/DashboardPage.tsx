@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/store/auth'
 import { useDataStore } from '@/store/data'
-import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight, Zap, ExternalLink } from 'lucide-react'
+import { Leaf, MapPin, ArrowRight, AlertCircle, TrendingUp, ClipboardList, FlaskConical, CheckCircle2, BadgeDollarSign, Beaker, Layers, PartyPopper, ChevronRight, ExternalLink } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -513,7 +513,7 @@ export default function DashboardPage() {
                 <YAxis axisLine={false} tickLine={false} fontSize={12} tickFormatter={v => `${v.toLocaleString('pt-BR')}`} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.1)' }}
-                  formatter={(v: number) => [`${v.toLocaleString('pt-BR')} VCUs`, 'Créditos']}
+                  formatter={(v: unknown) => [`${(v as number).toLocaleString('pt-BR')} VCUs`, 'Créditos']}
                 />
                 <Area type="monotone" dataKey="vcus" stroke="var(--color-primary)" strokeWidth={2.5} fill="url(#colorVcus)" dot={{ r: 4, fill: 'var(--color-primary)' }} />
               </AreaChart>

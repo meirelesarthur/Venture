@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -102,7 +102,7 @@ function EventoCard({ evento }: { evento: ReturnType<typeof useDataStore.getStat
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function AdminHistoricoTab({ fazendaId }: { fazendaId: string }) {
-  const { historicoFazendas, talhoes } = useDataStore()
+  const { historicoFazendas } = useDataStore()
 
   // Todos os eventos desta fazenda (já vêm em ordem inversa do store)
   const todoEventos = historicoFazendas.filter(e => e.fazendaId === fazendaId)
@@ -189,7 +189,7 @@ export function AdminHistoricoTab({ fazendaId }: { fazendaId: string }) {
             <div className="grid sm:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Tipo de Ator</Label>
-                <Select value={filtroAtor} onValueChange={(v: string) => setFiltroAtor(v)}>
+                <Select value={filtroAtor} onValueChange={(v: string) => setFiltroAtor(v as 'todos' | 'venture_carbon' | 'cliente')}>
                   <SelectTrigger className="h-8 text-xs rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>

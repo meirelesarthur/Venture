@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { v4 as uuidv4 } from 'uuid'
 import { toast } from 'sonner'
 import { ArrowLeft, ChevronRight, Save, MapPin, Cloud, FlaskConical, Leaf, Link2, User, Loader2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -42,7 +41,7 @@ export default function AdminControlSiteForm() {
   )
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(controlSiteSchema),
+    resolver: zodResolver(controlSiteSchema) as any,
     defaultValues: existing ? {
       nome: existing.nome,
       gestor_nome: existing.gestor_nome,
@@ -84,10 +83,10 @@ export default function AdminControlSiteForm() {
     await new Promise(r => setTimeout(r, 600))
     const payload = { ...data, historico_manejo: historicoManejo, fazendasVinculadasIds: fazendasVinculadas }
     if (isEdit && existing) {
-      updateControlSite(existing.id, payload)
+      updateControlSite(existing.id, payload as any)
       toast.success('Control Site atualizado com sucesso!')
     } else {
-      addControlSite({ id: uuidv4(), ...payload })
+      addControlSite(payload as any)
       toast.success('Control Site cadastrado com sucesso!')
     }
     setSaving(false)

@@ -5,7 +5,7 @@ import { SubEquacao, ModuloCard } from './MotorEquations'
 
 // ─── Seção RothC ──────────────────────────────────────────────────────────────
 
-export function SecaoRothC({ r, talhaoArea, forceOpen }: { r: ResultadoMotor; talhaoArea: number; forceOpen?: boolean }) {
+export function SecaoRothC({ r, talhaoArea: _talhaoArea, forceOpen }: { r: ResultadoMotor; talhaoArea: number; forceOpen?: boolean }) {
   const d = r.detalhesCalculo as DetalhesCalculo
   if (!d) return null
   const base = d.rothcBase
@@ -113,7 +113,7 @@ export function SecaoRothC({ r, talhaoArea, forceOpen }: { r: ResultadoMotor; ta
           <SubEquacao ref="§5.3.5" titulo="9. Particionamento CO₂ vs BIO+HUM por % Argila"
             formula="x = 1.67×(1.85 + 1.60×exp(−0.0786×argila)); frac_CO₂=x/(x+1); frac_BioHum=1/(x+1)"
             valores={[
-              { label: '% Argila', val: `${sn(proj?.argilaPercent ?? d?.rothcProj?.argilaPercent, 1)}%` },
+              { label: '% Argila', val: '—' },
               { label: 'x (calc)', val: sn(proj?.xParticao, 4) },
               { label: 'frac_CO₂', val: sn(proj?.fracCO2, 4) },
               { label: 'frac_BioHum', val: sn(proj?.fracBioHum, 4), destaque: true },
@@ -167,7 +167,7 @@ export function SecaoN2O({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: bool
               { label: 'Tem inibidor?', val: proj?.temInibidor ? 'Sim' : 'Não' },
               { label: 'EF1 selecionado', val: sn(proj?.ef1Usado), destaque: true },
               { label: 'N₂O direto (proj)', val: `${sn(proj?.n2oDireto)} tCO₂e/ha` },
-              { label: 'N₂O indir. (proj)', val: `${sn(proj?.n2oIndireto ?? ((proj?.n2oVolat ?? 0) + (proj?.n2oLeach ?? 0)))} tCO₂e/ha` },
+              { label: 'N₂O indir. (proj)', val: `${sn((proj?.n2oVolat ?? 0) + (proj?.n2oLeach ?? 0))} tCO₂e/ha` },
               { label: 'N₂O esterco (proj)', val: `${sn(proj?.n2oEsterco)} tCO₂e/ha` },
               { label: 'N₂O BNF (proj)', val: `${sn(proj?.n2oBnf)} tCO₂e/ha` },
               { label: 'N₂O Total (proj)', val: `${sn(proj?.n2oTotal)} tCO₂e/ha`, destaque: true },
@@ -196,13 +196,13 @@ export function SecaoN2O({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: bool
               { label: 'N volat. sint.', val: `${sn(proj?.nVolatSint, 2)} kg N/ha` },
               { label: 'N volat. org.', val: `${sn(proj?.nVolatOrg, 2)} kg N/ha` },
               { label: 'N volat. total', val: `${sn(proj?.nVolatTotal, 2)} kg N/ha`, destaque: true },
-              { label: 'Frac_GASF usado', val: sn(proj?.fracGasfUsado) },
-              { label: 'Frac_GASM', val: sn(proj?.fracGasmUsado) },
-              { label: 'EF4 (volatil.)', val: sn(proj?.ef4Usado) },
+              { label: 'Frac_GASF usado', val: '—' },
+              { label: 'Frac_GASM', val: '—' },
+              { label: 'EF4 (volatil.)', val: sn(proj?.ef4) },
               { label: 'N₂O volatilização', val: `${sn(proj?.n2oVolat)} tCO₂e/ha` },
               { label: 'N lixiviado', val: `${sn(proj?.nLeachTotal, 2)} kg N/ha` },
               { label: 'Frac_LEACH', val: sn(proj?.fracLeach) },
-              { label: 'EF5 (lixiviação)', val: sn(proj?.ef5Usado) },
+              { label: 'EF5 (lixiviação)', val: sn(proj?.ef5) },
               { label: 'N₂O lixiviação', val: `${sn(proj?.n2oLeach)} tCO₂e/ha`, destaque: true },
             ]}
             resultado={`${sn((proj?.n2oVolat ?? 0) + (proj?.n2oLeach ?? 0))} tCO₂e/ha`}
@@ -486,7 +486,7 @@ export function exportarCSV(r: ResultadoMotor, talhaoNome: string, areaHa: numbe
     // CH4
     row('CH4', 'Eq.11', 'Pop_animais', sn(d.ch4Base?.popAnimais, 0), sn(d.ch4Proj?.popAnimais, 0), 'cabeças'),
     row('CH4', 'Eq.11', 'CH4_enterico (tCO2e/ha)', sn(d.ch4Base?.ch4Enterico), sn(d.ch4Proj?.ch4Enterico), 'tCO2e/ha'),
-    row('CH4', 'Eq.12-13', 'VS_rate_medio (kgVS/dia)', sn(d.ch4Base?.vsRateMedio ?? 0), sn(d.ch4Proj?.vsRateMedio), 'kgVS/cab/dia'),
+    row('CH4', 'Eq.12-13', 'VS_rate_medio (kgVS/dia)', sn(0), sn(d.ch4Proj?.vsRateMedio), 'kgVS/cab/dia'),
     row('CH4', 'Eq.12-13', 'CH4_esterco (tCO2e/ha)', sn(d.ch4Base?.ch4Esterco), sn(d.ch4Proj?.ch4Esterco), 'tCO2e/ha'),
     row('CH4', 'Eq.14', 'MB_queimado (t MS/ha)', '—', sn(d.ch4Proj?.mbQueimado), 't MS/ha'),
     row('CH4', 'Eq.14', 'CH4_queima (tCO2e/ha)', sn(d.ch4Base?.ch4Queima), sn(d.ch4Proj?.ch4Queima), 'tCO2e/ha'),

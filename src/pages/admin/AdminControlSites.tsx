@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   MapPin, Plus, AlertCircle, BarChart3, Zap, Activity, ChevronRight, Info, Map,

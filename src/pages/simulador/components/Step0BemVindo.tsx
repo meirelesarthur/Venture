@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Leaf, MapPin, Clock } from 'lucide-react'
+import { MapPin, Clock } from 'lucide-react'
 import Logo from '@/assets/Logo.png'
 
 interface Props {

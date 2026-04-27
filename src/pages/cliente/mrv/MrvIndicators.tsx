@@ -1,10 +1,11 @@
 import { useDataStore } from '@/store/data'
+import type { DadosManejoAnual } from '@/store/data'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, ChevronRight, Map, Layers, Leaf } from 'lucide-react'
 
 // ── getManejoStatus ───────────────────────────────────────────────────────────
 
-export function getManejoStatus(talhaoId: string, manejo: ReturnType<typeof useDataStore>['manejo'], anoAgricola: number) {
+export function getManejoStatus(talhaoId: string, manejo: DadosManejoAnual[], anoAgricola: number) {
   const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
   if (!m) return { lavoura: 'empty' as const, pecuaria: 'empty' as const }
   const lavouraOk = !!(m.cultura || (m.culturas && m.culturas.length > 0))
@@ -18,7 +19,7 @@ export function getManejoStatus(talhaoId: string, manejo: ReturnType<typeof useD
 
 // ── getManejoProgress ─────────────────────────────────────────────────────────
 
-export function getManejoProgress(talhaoId: string, manejo: ReturnType<typeof useDataStore>['manejo'], anoAgricola: number) {
+export function getManejoProgress(talhaoId: string, manejo: DadosManejoAnual[], anoAgricola: number) {
   const m = manejo.find(x => x.talhaoId === talhaoId && x.anoAgricola === anoAgricola && x.cenario === 'projeto')
   if (!m) return 'empty' as const
   const lavouraOk = !!(m.cultura || (m.culturas && m.culturas.length > 0))
@@ -61,11 +62,11 @@ export type YearStatus = 'aprovado' | 'pendente' | 'correcao' | 'rascunho' | 'em
 export function getYearMrvStatus(
   year: number,
   projetoTalhoes: { id: string }[],
-  manejo: ReturnType<typeof useDataStore>['manejo']
+  manejo: DadosManejoAnual[]
 ): YearStatus {
   const records = projetoTalhoes
     .map(t => manejo.find(m => m.talhaoId === t.id && m.anoAgricola === year && m.cenario === 'projeto'))
-    .filter(Boolean) as ReturnType<typeof useDataStore>['manejo']
+    .filter(Boolean) as DadosManejoAnual[]
   if (records.length === 0) return 'empty'
   if (records.some(m => m.status === 'correcao')) return 'correcao'
   if (records.some(m => m.status === 'pendente')) return 'pendente'

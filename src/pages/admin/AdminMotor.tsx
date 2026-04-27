@@ -9,7 +9,6 @@ import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { useDataStore } from '@/store/data'
 import { rodarMotorCompleto } from '@/motor'
-import type { ResultadoMotor } from '@/store/data'
 import { SecaoRothC, SecaoN2O, SecaoCH4, SecaoCO2, SecaoCreditos, exportarCSV } from './components/motor/MotorSections'
 
 interface LogEntry { step: string; percent: number }

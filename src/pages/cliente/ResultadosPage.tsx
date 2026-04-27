@@ -141,7 +141,7 @@ export default function ResultadosPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString('pt-BR')} VCUs`, '']} />
+                  <Tooltip formatter={(v: unknown) => [`${(v as number).toLocaleString('pt-BR')} VCUs`, '']} />
                   <Bar dataKey="vcus" fill="var(--color-success, #16A34A)" radius={[4,4,0,0]} name="VCUs" />
                 </BarChart>
               </ResponsiveContainer>
@@ -161,7 +161,7 @@ export default function ResultadosPage() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => [`R$ ${v.toLocaleString('pt-BR')}`, '']} />
+                  <Tooltip formatter={(v: unknown) => [`R$ ${(v as number).toLocaleString('pt-BR')}`, '']} />
                   <Line type="monotone" dataKey="acumulado" stroke="var(--color-primary, #057A8F)" strokeWidth={2.5} dot={{ r: 3 }} name="Acumulado" />
                 </LineChart>
               </ResponsiveContainer>
@@ -190,7 +190,7 @@ export default function ResultadosPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-                    <Tooltip formatter={(v: number, name: string) => [`${v.toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
+                    <Tooltip formatter={(v: unknown, name: string) => [`${(v as number).toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
                     <Line type="monotone" dataKey="baseline" stroke="var(--color-muted-foreground, #9CA3AF)" strokeWidth={2} strokeDasharray="5 3" dot={false} name="baseline" />
                     <Line type="monotone" dataKey="projeto"   stroke="var(--color-success, #16A34A)"         strokeWidth={2.5} dot={{ r: 3 }}               name="projeto"   />
                   </LineChart>
