@@ -78,7 +78,7 @@ export function TalhoesTab({ fazendaId, anoAgricola }: TalhoesTabProps) {
       <ResizablePanel
         defaultSize={30}
         minSize="150px"
-        maxSize={60}
+        maxSize={65}
         className="flex flex-col overflow-hidden border-r border-border/50"
       >
         {showAdd && (
