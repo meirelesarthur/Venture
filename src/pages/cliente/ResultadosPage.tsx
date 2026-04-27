@@ -190,7 +190,7 @@ export default function ResultadosPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="ano" fontSize={11} tickLine={false} axisLine={false} />
                     <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
-                    <Tooltip formatter={(v: unknown, name: string) => [`${(v as number).toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
+                    <Tooltip formatter={(v: unknown, name: unknown) => [`${(v as number).toFixed(2)}%`, name === 'baseline' ? 'Baseline (sem manejo)' : 'Projeto (com manejo)']} />
                     <Line type="monotone" dataKey="baseline" stroke="var(--color-muted-foreground, #9CA3AF)" strokeWidth={2} strokeDasharray="5 3" dot={false} name="baseline" />
                     <Line type="monotone" dataKey="projeto"   stroke="var(--color-success, #16A34A)"         strokeWidth={2.5} dot={{ r: 3 }}               name="projeto"   />
                   </LineChart>

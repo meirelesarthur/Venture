@@ -1,4 +1,3 @@
-import { useDataStore } from '@/store/data'
 import type { DadosManejoAnual } from '@/store/data'
 import { cn } from '@/lib/utils'
 import { CheckCircle2, ChevronRight, Map, Layers, Leaf } from 'lucide-react'
