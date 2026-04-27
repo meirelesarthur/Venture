@@ -23,7 +23,15 @@
       "Bash(git push *)",
       "Bash(gh pr *)",
       "Bash(git commit -m 'fix: cast GeoJSON literal types in KmlUploader to satisfy FeatureCollection *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(node -e \"const p=require\\('./node_modules/react-resizable-panels/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.dependencies['react-resizable-panels']\\)\")",
+      "Bash(node -e \"const p=require\\('./package-lock.json'\\); const pkg=p.packages['node_modules/react-resizable-panels']; console.log\\(pkg?.version\\)\")",
+      "Bash(node -e \"const exports = Object.keys\\(require\\('./node_modules/react-resizable-panels'\\)\\); console.log\\(exports.filter\\(e => e.includes\\('Props'\\) || e.includes\\('Group'\\) || e.includes\\('Handle'\\) || e.includes\\('Panel'\\) || e.includes\\('Separator'\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5173)",
+      "Bash(taskkill /F /PID 3780)",
+      "PowerShell(Stop-Process -Id 3780 -Force)"
     ]
   }
 }
