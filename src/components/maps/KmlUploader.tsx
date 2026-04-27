@@ -85,11 +85,11 @@ export default function KmlUploader({ onLoad, label = 'Carregar KML da proprieda
         setStatus('error')
         return
       }
-      const geojson = {
+      const geojson: import('geojson').FeatureCollection = {
         type: 'FeatureCollection',
         features: result.coordinates.map(poly => ({
-          type: 'Feature',
-          geometry: { type: 'Polygon', coordinates: [poly] },
+          type: 'Feature' as const,
+          geometry: { type: 'Polygon' as const, coordinates: [poly] },
           properties: { nome: file.name },
         })),
       }
