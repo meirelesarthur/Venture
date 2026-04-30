@@ -11,9 +11,13 @@ import { toast } from 'sonner'
 import {
   CheckCircle2, XCircle, Leaf, Tractor, FlaskConical,
   Save, Trash2, Info, CloudRain, ChevronDown, ChevronRight, Plus,
+  Droplets, Settings2, FileText,
 } from 'lucide-react'
 import LavouraForm from '@/pages/cliente/mrv/LavouraForm'
 import PecuariaForm from '@/pages/cliente/mrv/PecuariaForm'
+import FertilizacaoForm from '@/pages/cliente/mrv/FertilizacaoForm'
+import OperacionalForm from '@/pages/cliente/mrv/OperacionalForm'
+import DocumentosForm from '@/pages/cliente/mrv/DocumentosForm'
 import FazendaMap from '@/components/maps/FazendaMap'
 import { MESES, TEXTURAS, TOPOGRAFIAS, PRESETS } from '@/constants/climaticos'
 
@@ -222,43 +226,6 @@ export function DadosGeraisPanel({ talhao, fazendaId }: { talhao: Talhao; fazend
   )
 }
 
-// ── ManejoPanel ───────────────────────────────────────────────────────────────
-
-type ManejoSubType = 'lavoura' | 'pecuaria'
-
-export function ManejoPanel({ talhaoId, fazendaId, anoAgricola }: { talhaoId: string; fazendaId: string; anoAgricola: number }) {
-  const [sub, setSub] = useState<ManejoSubType>('lavoura')
-
-  const MANEJO_TABS = [
-    { id: 'lavoura' as const, label: 'Lavoura', Icon: Leaf },
-    { id: 'pecuaria' as const, label: 'Pecuária', Icon: Tractor },
-  ]
-
-  return (
-    <div className="space-y-4">
-      <div className="flex border-b border-border/50" role="tablist">
-        {MANEJO_TABS.map(t => (
-          <button key={t.id} role="tab" aria-selected={sub === t.id} onClick={() => setSub(t.id)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px',
-              sub === t.id
-                ? 'border-teal-600 text-teal-700'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-            )}>
-            <t.Icon size={13} />{t.label}
-          </button>
-        ))}
-      </div>
-      {sub === 'lavoura' && (
-        <LavouraForm talhaoIds={[talhaoId]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />
-      )}
-      {sub === 'pecuaria' && (
-        <PecuariaForm talhaoIds={[talhaoId]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />
-      )}
-    </div>
-  )
-}
-
 // ── ColetaSoloPanel ───────────────────────────────────────────────────────────
 
 type LinhaLocal = {
@@ -419,12 +386,18 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
 
 // ── TalhaoDetail ──────────────────────────────────────────────────────────────
 
-type DetailTab = 'dados' | 'manejo' | 'solo'
+import type React from 'react'
 
-const DETAIL_TABS: { id: DetailTab; label: string }[] = [
-  { id: 'dados', label: 'Dados Gerais' },
-  { id: 'manejo', label: 'Manejo' },
-  { id: 'solo', label: 'Coleta de Solo' },
+type DetailTab = 'dados' | 'lavoura' | 'pecuaria' | 'fertilizacao' | 'maquinario' | 'evidencias' | 'solo'
+
+const DETAIL_TABS: { id: DetailTab; label: string; Icon: React.ElementType }[] = [
+  { id: 'dados',        label: 'Dados Gerais', Icon: Info       },
+  { id: 'lavoura',      label: 'Lavoura',      Icon: Leaf       },
+  { id: 'pecuaria',     label: 'Pecuária',     Icon: Tractor    },
+  { id: 'fertilizacao', label: 'Fertilização', Icon: Droplets   },
+  { id: 'maquinario',   label: 'Maquinário',   Icon: Settings2  },
+  { id: 'evidencias',   label: 'Evidências',   Icon: FileText   },
+  { id: 'solo',         label: 'Coleta de Solo', Icon: FlaskConical },
 ]
 
 export function TalhaoDetail({ talhao, fazendaId, anoAgricola }: { talhao: Talhao; fazendaId: string; anoAgricola: number }) {
@@ -432,24 +405,29 @@ export function TalhaoDetail({ talhao, fazendaId, anoAgricola }: { talhao: Talha
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex border-b border-border/50 px-4 bg-surface/10 shrink-0" role="tablist">
+      <div className="flex border-b border-border/50 px-2 bg-surface/10 shrink-0 overflow-x-auto" role="tablist">
         {DETAIL_TABS.map(t => (
           <button key={t.id} role="tab" aria-selected={sub === t.id} onClick={() => setSub(t.id)}
             className={cn(
-              'px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px',
+              'flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-all -mb-px whitespace-nowrap shrink-0',
               sub === t.id
                 ? 'border-teal-600 text-teal-700'
                 : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             )}>
+            <t.Icon size={12} />
             {t.label}
           </button>
         ))}
       </div>
 
       <div className="flex-1 overflow-y-auto p-5">
-        {sub === 'dados' && <DadosGeraisPanel talhao={talhao} fazendaId={fazendaId} />}
-        {sub === 'manejo' && <ManejoPanel talhaoId={talhao.id} fazendaId={fazendaId} anoAgricola={anoAgricola} />}
-        {sub === 'solo' && <ColetaSoloPanel talhao={talhao} fazendaId={fazendaId} />}
+        {sub === 'dados'        && <DadosGeraisPanel talhao={talhao} fazendaId={fazendaId} />}
+        {sub === 'lavoura'      && <LavouraForm talhaoIds={[talhao.id]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />}
+        {sub === 'pecuaria'     && <PecuariaForm talhaoIds={[talhao.id]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />}
+        {sub === 'fertilizacao' && <FertilizacaoForm talhaoIds={[talhao.id]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />}
+        {sub === 'maquinario'   && <OperacionalForm talhaoIds={[talhao.id]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />}
+        {sub === 'evidencias'   && <DocumentosForm talhaoIds={[talhao.id]} fazendaId={fazendaId} anoAgricola={anoAgricola} locked={false} />}
+        {sub === 'solo'         && <ColetaSoloPanel talhao={talhao} fazendaId={fazendaId} />}
       </div>
     </div>
   )
