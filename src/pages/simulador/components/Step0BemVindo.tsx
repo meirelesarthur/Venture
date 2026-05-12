@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { MapPin, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import Logo from '@/assets/Logo.png'
 
 interface Props {
@@ -10,14 +10,10 @@ export function Step0BemVindo({ onNext }: Props) {
   return (
     <div className="flex flex-col items-center justify-center text-center p-8 min-h-[400px]">
       <div className="flex items-center justify-center mb-6">
-        <img src={Logo} alt="Venture Carbon" className="h-10 object-contain" />
-      </div>
-      
-      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-        <MapPin size={28} className="text-primary" />
+        <img src={Logo} alt="Venture Carbon" className="h-[52px] object-contain" />
       </div>
 
-      <h1 className="text-2xl font-bold text-foreground mb-4 max-w-[280px]">
+      <h1 className="text-2xl font-bold text-foreground mb-4 max-w-[340px]">
         Calcule quanto sua fazenda pode receber com Carbono
       </h1>
 

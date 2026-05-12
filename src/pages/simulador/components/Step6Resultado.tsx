@@ -18,7 +18,7 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
   const ptax = getParam('ptax_fallback') || 5.65
 
   const { receitas, tCO2eAno, receitaAnualMedia, receitaTotal } = useMemo(() => {
-    const anos = parseInt(data.horizonte || '10', 10)
+    const anos = parseInt(data.horizonte || '20', 10)
     const preco_brl = preco_base_usd * ptax
     const areaHa = data.area?.hectares || 0
 

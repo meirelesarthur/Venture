@@ -84,7 +84,7 @@ export default function AdminFazendaDetalhe() {
 
         {/* ── Tab bar L1 ── */}
         <div
-          className="flex border-b border-border/50 overflow-x-auto"
+          className="flex border-b border-border/50 overflow-x-auto scrollbar-hide"
           role="tablist"
           aria-label="Navegação MRV"
         >

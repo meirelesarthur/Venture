@@ -174,7 +174,7 @@ export function DadosGeraisPanel({ talhao, fazendaId }: { talhao: Talhao; fazend
                 </Button>
               ))}
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-accent/5">
@@ -405,7 +405,7 @@ export function TalhaoDetail({ talhao, fazendaId, anoAgricola }: { talhao: Talha
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex border-b border-border/50 px-2 bg-surface/10 shrink-0 overflow-x-auto" role="tablist">
+      <div className="flex border-b border-border/50 px-2 bg-surface/10 shrink-0 overflow-x-auto scrollbar-hide" role="tablist">
         {DETAIL_TABS.map(t => (
           <button key={t.id} role="tab" aria-selected={sub === t.id} onClick={() => setSub(t.id)}
             className={cn(
