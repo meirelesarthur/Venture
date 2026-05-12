@@ -540,7 +540,6 @@ export function exportarCSVMultiTalhao(resultados: ResultadoMotor[], talhoes: Ta
   const sn = (v: unknown, dec = 6) => typeof v === 'number' ? v.toFixed(dec) : String(v ?? '\u2014')
 
   // Monta par de colunas base/proj para cada talh\u00E3o \u2014 mesma ordem de linhas
-  type RowBuilder = (r: ResultadoMotor, t: Talhao) => string[]
   const cols: { talhao: Talhao; result: ResultadoMotor }[] = resultados
     .map(r => ({ talhao: talhoes.find(t => t.id === r.talhaoId)!, result: r }))
     .filter(x => x.talhao && (x.result.detalhesCalculo as DetalhesCalculo))
