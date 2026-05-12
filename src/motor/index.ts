@@ -31,6 +31,7 @@ interface N2OProjIntermediarios {
   ef1Usado: number; zonaClimatica: string; temInibidor: boolean
   totalNSint: number; totalNOrg: number; totalNFert: number
   n2oDireto: number; nVolatSint: number; nVolatOrg: number; nVolatTotal: number
+  fracGasf: number; fracGasm: number
   ef4: number; n2oVolat: number; nLeachTotal: number; fracLeach: number
   ef5: number; n2oLeach: number; fManure: number; efEsterco: number
   n2oEsterco: number; bioMassaLeg: number; nContent: number
@@ -57,8 +58,9 @@ interface CH4BaseIntermediarios {
 
 interface CO2ProjIntermediarios {
   efDiesel: number; efGasolina: number; detalhesCombust: DetalheCombustivel[]
-  co2Ff: number; efCalcitico: number; efDolomitico: number
-  fatorCCO2: number; detalhesCalc: DetalheCal[]; co2Lime: number
+  co2ByFuelType: Record<string, number>; co2Ff: number
+  efCalcitico: number; efDolomitico: number; fatorCCO2: number
+  co2ByLimeType: Record<string, number>; detalhesCalc: DetalheCal[]; co2Lime: number
 }
 
 interface CO2BaseIntermediarios {
@@ -385,6 +387,8 @@ export async function rodarMotorCompleto(
         nVolatSint:        n2oProj.nVolatSint,
         nVolatOrg:         n2oProj.nVolatOrg,
         nVolatTotal:       n2oProj.nVolatTotal,
+        fracGasf:          n2oProj.fracGasfUsado,
+        fracGasm:          n2oProj.fracGasmUsado,
         ef4:               n2oProj.ef4Usado,
         n2oVolat:          n2oProj.n2oVolatTco2eHa,
         nLeachTotal:       n2oProj.nLeachTotal,
@@ -443,10 +447,12 @@ export async function rodarMotorCompleto(
         efDiesel:         co2Proj.efDieselUsado,
         efGasolina:       co2Proj.efGasolinaUsado,
         detalhesCombust:  co2Proj.detalhesCombustiveis,
+        co2ByFuelType:    co2Proj.co2ByFuelType,
         co2Ff:            co2Proj.co2FfTco2eHa,
         efCalcitico:      co2Proj.efCalciticoUsado,
         efDolomitico:     co2Proj.efDolomiticoUsado,
         fatorCCO2:        co2Proj.fatorConversaoCCO2,
+        co2ByLimeType:    co2Proj.co2ByLimeType,
         detalhesCalc:     co2Proj.detalhesCalcario,
         co2Lime:          co2Proj.co2LimeTco2eHa,
       },

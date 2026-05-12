@@ -11,10 +11,10 @@ export function TalhaoEditModal({ talhaoId, onClose }: { talhaoId: string; onClo
   const talhao = talhoes.find(t => t.id === talhaoId)
   const [nome, setNome] = useState(talhao?.nome || '')
   const [area, setArea] = useState(String(talhao?.areaHa || ''))
-  const [soc, setSoc] = useState(String(talhao?.socPercent || ''))
+  const [argila, setArgila] = useState(String(talhao?.argilaPercent || ''))
   if (!talhao) return null
   const handleSave = () => {
-    updateTalhao(talhaoId, { nome, areaHa: Number(area), socPercent: soc ? Number(soc) : undefined })
+    updateTalhao(talhaoId, { nome, areaHa: Number(area), argilaPercent: argila ? Number(argila) : undefined })
     toast.success('Talhão atualizado!')
     onClose()
   }
@@ -33,7 +33,7 @@ export function TalhaoEditModal({ talhaoId, onClose }: { talhaoId: string; onClo
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label>Área (ha)</Label><Input type="number" value={area} onChange={e => setArea(e.target.value)} className="rounded-xl" /></div>
-            <div className="space-y-1.5"><Label>SOC (%)</Label><Input type="number" step="0.1" value={soc} onChange={e => setSoc(e.target.value)} className="rounded-xl" placeholder="Ex: 2.1" /></div>
+            <div className="space-y-1.5"><Label>Argila (%)</Label><Input type="number" step="0.1" value={argila} onChange={e => setArgila(e.target.value)} className="rounded-xl" placeholder="Ex: 35" /></div>
           </div>
         </div>
         <div className="flex gap-2 pt-2">

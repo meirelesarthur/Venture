@@ -137,8 +137,8 @@ export default function AdminControlSiteDetalhe() {
           </CardHeader>
           <CardContent className="pt-4">
             <InfoRow label="SOC médio" value={cs.soc_medio_pct !== undefined ? `${cs.soc_medio_pct.toFixed(3)}%` : undefined} />
-            <InfoRow label="IC 90% inferior" value={cs.soc_ic_lower !== undefined ? `${cs.soc_ic_lower.toFixed(3)}%` : undefined} />
-            <InfoRow label="IC 90% superior" value={cs.soc_ic_upper !== undefined ? `${cs.soc_ic_upper.toFixed(3)}%` : undefined} />
+            <InfoRow label="IC 95% inferior" value={cs.soc_ic_lower !== undefined ? `${cs.soc_ic_lower.toFixed(3)}%` : undefined} />
+            <InfoRow label="IC 95% superior" value={cs.soc_ic_upper !== undefined ? `${cs.soc_ic_upper.toFixed(3)}%` : undefined} />
             <InfoRow label="n amostras" value={cs.n_amostras_soc} />
             <InfoRow label="Primeira coleta" value={cs.data_primeira_coleta} />
             {cs.n_amostras_soc !== undefined && (

@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Play, CheckCircle2, RefreshCw, ChevronDown, ChevronRight, Download, FlaskConical } from 'lucide-react'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { useDataStore } from '@/store/data'
 import { rodarMotorCompleto } from '@/motor'
-import { SecaoRothC, SecaoN2O, SecaoCH4, SecaoCO2, SecaoCreditos, exportarCSV } from './components/motor/MotorSections'
+import { SecaoRothC, SecaoN2O, SecaoCH4, SecaoCO2, SecaoCreditos, exportarCSV, exportarCSVMultiTalhao } from './components/motor/MotorSections'
 
 interface LogEntry { step: string; percent: number }
 
@@ -22,17 +23,23 @@ export default function AdminMotor() {
 
   const meusTalhoes = talhoes.filter(t => t.fazendaId === fazenda?.id && t.tipo === 'projeto')
 
-  const [talhaoId, setTalhaoId] = useState(meusTalhoes[0]?.id ?? '')
+  const [talhoesSel, setTalhoesSel] = useState<string[]>(meusTalhoes[0] ? [meusTalhoes[0].id] : [])
   const [expandAllModulos, setExpandAllModulos] = useState<boolean | undefined>(undefined)
+
+  const toggleTalhao = (id: string) =>
+    setTalhoesSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   useEffect(() => {
     const ts = talhoes.filter(t => t.fazendaId === selFazendaId && t.tipo === 'projeto')
-    if (ts.length > 0 && !ts.find(t => t.id === talhaoId)) {
-      setTalhaoId(ts[0].id)
-    } else if (ts.length === 0) {
-      setTalhaoId('')
+    if (ts.length > 0) {
+      setTalhoesSel(prev => {
+        const valid = prev.filter(id => ts.find(t => t.id === id))
+        return valid.length > 0 ? valid : [ts[0].id]
+      })
+    } else {
+      setTalhoesSel([])
     }
-  }, [selFazendaId, talhoes, talhaoId])
+  }, [selFazendaId, talhoes])
 
   const [anoAgricola, setAnoAgricola] = useState('2025')
   const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
@@ -40,56 +47,73 @@ export default function AdminMotor() {
   const [log, setLog] = useState<LogEntry[]>([])
   const [expandedResult, setExpandedResult] = useState<string | null>(null)
 
-  const talhaoSel  = talhoes.find(t => t.id === talhaoId)
-  const resultados = resultadosMotor.filter(r => r.talhaoId === talhaoId && r.anoAgricola === Number(anoAgricola))
+  const resultados = resultadosMotor.filter(r => talhoesSel.includes(r.talhaoId) && r.anoAgricola === Number(anoAgricola))
 
   const currentYear = new Date().getFullYear()
   const anos = [currentYear - 1, currentYear, currentYear + 1]
 
   const handleRodar = async () => {
-    if (!talhaoSel) { toast.error('Selecione um talhão.'); return }
+    if (!talhoesSel.length) { toast.error('Selecione ao menos um talhão.'); return }
 
-    const anoNum   = Number(anoAgricola)
-    const manejoProj = manejo.find(m => m.talhaoId === talhaoId && m.anoAgricola === anoNum && m.cenario === 'projeto')
-
-    if (!manejoProj) {
-      toast.error(`Não há dados MRV (projeto) para ${talhaoSel.nome} — Safra ${anoNum}.`)
-      return
-    }
-
-    const manejoBase = manejo.find(m => m.talhaoId === talhaoId && m.cenario === 'baseline') ?? null
-    const clima      = dadosClimaticos.find(d => d.talhaoId === talhaoId) ?? null
-
+    const anoNum = Number(anoAgricola)
     setStatus('running')
     setProgresso(0)
     setLog([])
-    clearResultadosTalhao(talhaoId, anoNum)
 
-    try {
-      const resultado = await rodarMotorCompleto(
-        talhaoSel,
-        manejoProj,
-        manejoBase,
-        clima,
-        parametros,
-        (step, percent) => {
-          setLog(prev => [...prev, { step, percent }])
-          setProgresso(percent)
-        },
-      )
+    let vcusTotal = 0
+    let erros = 0
 
-      addResultadoMotor(resultado)
-      addNotificacao({
-        para: 'cliente',
-        texto: `Motor executado: ${talhaoSel.nome} — ${resultado.vcusEmitidosTotal.toFixed(0)} VCUs calculados para safra ${anoNum}.`,
-        link: '/dashboard/resultados',
-      })
-      setStatus('done')
-      setExpandedResult(null)
-      toast.success(`Motor concluído! ${resultado.vcusEmitidosTotal.toFixed(1)} VCUs emitidos.`)
-    } catch (err) {
-      setStatus('error')
+    for (let i = 0; i < talhoesSel.length; i++) {
+      const tid = talhoesSel[i]
+      const talhaoSel = talhoes.find(t => t.id === tid)
+      if (!talhaoSel) continue
+
+      const manejoProj = manejo.find(m => m.talhaoId === tid && m.anoAgricola === anoNum && m.cenario === 'projeto')
+      if (!manejoProj) {
+        setLog(prev => [...prev, { step: `⚠ ${talhaoSel.nome}: sem dados MRV — pulado`, percent: 0 }])
+        erros++
+        continue
+      }
+
+      const manejoBase = manejo.find(m => m.talhaoId === tid && m.cenario === 'baseline') ?? null
+      const clima      = dadosClimaticos.find(d => d.talhaoId === tid) ?? null
+
+      clearResultadosTalhao(tid, anoNum)
+
+      try {
+        const basePercent = Math.round((i / talhoesSel.length) * 100)
+        const resultado = await rodarMotorCompleto(
+          talhaoSel,
+          manejoProj,
+          manejoBase,
+          clima,
+          parametros,
+          (step, percent) => {
+            const globalPct = basePercent + Math.round(percent / talhoesSel.length)
+            setLog(prev => [...prev, { step: `[${talhaoSel.nome}] ${step}`, percent: globalPct }])
+            setProgresso(globalPct)
+          },
+        )
+
+        addResultadoMotor(resultado)
+        vcusTotal += resultado.vcusEmitidosTotal
+        addNotificacao({
+          para: 'cliente',
+          texto: `Motor executado: ${talhaoSel.nome} — ${resultado.vcusEmitidosTotal.toFixed(0)} VCUs calculados para safra ${anoNum}.`,
+          link: '/dashboard/resultados',
+        })
+      } catch {
+        erros++
+        setLog(prev => [...prev, { step: `✗ ${talhaoSel.nome}: erro no cálculo`, percent: 0 }])
+      }
+    }
+
+    setStatus(erros === talhoesSel.length ? 'error' : 'done')
+    setExpandedResult(null)
+    if (erros === talhoesSel.length) {
       toast.error('Erro ao executar o motor de cálculos.')
+    } else {
+      toast.success(`Motor concluído! ${vcusTotal.toFixed(1)} VCUs totais em ${talhoesSel.length - erros} talhão(ões).`)
     }
   }
 
@@ -122,17 +146,20 @@ export default function AdminMotor() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Talhão de Projeto</Label>
-            <Select value={talhaoId} onValueChange={setTalhaoId} disabled={meusTalhoes.length === 0}>
-              <SelectTrigger className="rounded-xl"><SelectValue placeholder={meusTalhoes.length ? "Selecionar talhão..." : "Nenhum talhão"} /></SelectTrigger>
-              <SelectContent>
+            <Label>Talhões de Projeto</Label>
+            {meusTalhoes.length === 0 ? (
+              <p className="text-xs text-muted py-2">Nenhum talhão cadastrado.</p>
+            ) : (
+              <div className="border rounded-xl divide-y divide-border/40 overflow-hidden">
                 {meusTalhoes.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.nome} ({t.areaHa} ha){t.dadosValidados ? ' ✓' : ' ⚠'}
-                  </SelectItem>
+                  <label key={t.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors hover:bg-accent/5 ${talhoesSel.includes(t.id) ? 'bg-primary/5' : ''}`}>
+                    <Checkbox checked={talhoesSel.includes(t.id)} onCheckedChange={() => toggleTalhao(t.id)} />
+                    <span className="text-sm flex-1">{t.nome} <span className="text-xs text-muted">({t.areaHa} ha)</span></span>
+                    <span className="text-xs">{t.dadosValidados ? '✓' : '⚠'}</span>
+                  </label>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Ano Agrícola</Label>
@@ -184,13 +211,13 @@ export default function AdminMotor() {
             <div className="text-center space-y-2">
               <div className="text-4xl font-bold text-foreground">
                 {status === 'done' && resultados.length > 0
-                  ? resultados[resultados.length-1].vcusEmitidosTotal.toFixed(1)
+                  ? resultados.reduce((s, r) => s + r.vcusEmitidosTotal, 0).toFixed(1)
                   : '---'}
               </div>
               <p className="text-sm text-muted">VCUs emitidos (total)</p>
               {status === 'done' && resultados.length > 0 && (
                 <p className="text-xs text-success">
-                  {resultados[resultados.length-1].vcusEmitidosHa.toFixed(2)} tCO₂e/ha
+                  {talhoesSel.length > 1 ? `${resultados.length} talhão(ões) calculados` : `${resultados[resultados.length-1].vcusEmitidosHa.toFixed(2)} tCO₂e/ha`}
                 </p>
               )}
             </div>
@@ -229,7 +256,7 @@ export default function AdminMotor() {
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
                   <FlaskConical size={16} className="text-primary" />
-                  Cadeia Completa de Equações — {talhaoSel?.nome} · Safra {anoAgricola}/{Number(anoAgricola)+1}
+                  Cadeia Completa de Equações — Safra {anoAgricola}/{Number(anoAgricola)+1}
                 </CardTitle>
                 <CardDescription className="mt-1">
                   Cada módulo pode ser expandido para ver as equações intermediárias passo a passo com valores reais calculados.
@@ -243,7 +270,26 @@ export default function AdminMotor() {
             </div>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
-            {resultados.map(r => (
+            {talhoesSel.length > 1 && resultados.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-lg text-xs"
+                  onClick={() => exportarCSVMultiTalhao(
+                    resultados,
+                    talhoesSel.map(id => talhoes.find(t => t.id === id)!).filter(Boolean),
+                    Number(anoAgricola),
+                  )}
+                >
+                  <Download size={13} />
+                  Exportar todos os talhões (CSV colunas)
+                </Button>
+              </div>
+            )}
+            {resultados.map(r => {
+              const rTalhao = talhoes.find(t => t.id === r.talhaoId)
+              return (
               <div key={r.id} className="border border-border/50 rounded-xl overflow-hidden">
                 <button
                   className="flex items-center justify-between w-full p-4 bg-surface/30 hover:bg-accent/5 text-left"
@@ -252,7 +298,7 @@ export default function AdminMotor() {
                   <div className="flex items-center gap-3">
                     {expandedResult === r.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     <div>
-                      <p className="text-sm font-semibold">Motor v{r.versaoMotor} · {new Date(r.rodadoEm).toLocaleString('pt-BR')}</p>
+                      <p className="text-sm font-semibold">{rTalhao?.nome ?? 'Talhão'} · Motor v{r.versaoMotor} · {new Date(r.rodadoEm).toLocaleString('pt-BR')}</p>
                       <p className="text-xs text-muted">Buffer: {(r.bufferPoolRate*100).toFixed(0)}% · UNC SOC: ±{(r.uncCo2*100).toFixed(1)}% · UNC N₂O: ±{(r.uncN2o*100).toFixed(1)}%</p>
                     </div>
                   </div>
@@ -270,21 +316,21 @@ export default function AdminMotor() {
                           variant="outline"
                           size="sm"
                           className="gap-2 rounded-lg text-xs"
-                          onClick={() => exportarCSV(r, talhaoSel?.nome ?? 'talhao', talhaoSel?.areaHa ?? 0)}
+                          onClick={() => exportarCSV(r, rTalhao?.nome ?? 'talhao', rTalhao?.areaHa ?? 0)}
                         >
                           <Download size={13} />
-                          Exportar Planilha CSV (Análise Técnica)
+                          Exportar CSV (este talhão)
                         </Button>
                       </div>
                     )}
 
                     {r.detalhesCalculo ? (
                       <div className="space-y-3">
-                        <SecaoRothC r={r} talhaoArea={talhaoSel?.areaHa ?? 0} forceOpen={expandAllModulos} />
+                        <SecaoRothC r={r} talhaoArea={rTalhao?.areaHa ?? 0} forceOpen={expandAllModulos} />
                         <SecaoN2O r={r} forceOpen={expandAllModulos} />
                         <SecaoCH4 r={r} forceOpen={expandAllModulos} />
                         <SecaoCO2 r={r} forceOpen={expandAllModulos} />
-                        <SecaoCreditos r={r} talhaoArea={talhaoSel?.areaHa ?? 0} forceOpen={expandAllModulos} />
+                        <SecaoCreditos r={r} talhaoArea={rTalhao?.areaHa ?? 0} forceOpen={expandAllModulos} />
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -296,7 +342,8 @@ export default function AdminMotor() {
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
           </CardContent>
         </Card>
       )}

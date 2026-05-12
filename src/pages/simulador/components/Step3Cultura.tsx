@@ -103,7 +103,7 @@ export function Step3Cultura({ onNext, onPrev }: { onNext: () => void; onPrev: (
                       </div>
                     )}
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
-                      <Label className="text-xs font-bold cursor-pointer text-primary" htmlFor={`saf-${field.id}`}>Faz Safrinha na mesma área?</Label>
+                      <Label className="text-xs font-bold cursor-pointer text-primary" htmlFor={`saf-${field.id}`}>faz safrinha na mesma área?</Label>
                       <Switch 
                         id={`saf-${field.id}`} 
                         checked={field.has_safrinha || false} 

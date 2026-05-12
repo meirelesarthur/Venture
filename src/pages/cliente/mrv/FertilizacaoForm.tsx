@@ -136,10 +136,10 @@ export default function FertilizacaoForm({ talhaoIds, fazendaId, anoAgricola, lo
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-1 mt-6">
+                <div className="flex flex-col items-end gap-1 mt-1">
                   {!locked && (
-                    <button type="button" className="text-muted hover:text-primary" title="Anexar nota fiscal" onClick={() => handleFileUpload(setSintFiles, i)}>
-                      <Paperclip size={14} />
+                    <button type="button" className="flex items-center gap-1 text-xs text-muted hover:text-primary transition-colors" onClick={() => handleFileUpload(setSintFiles, i)}>
+                      <Paperclip size={13} /> Anexar nota fiscal
                     </button>
                   )}
                   {!locked && sint.length > 1 && (
@@ -215,14 +215,14 @@ export default function FertilizacaoForm({ talhaoIds, fazendaId, anoAgricola, lo
                     />
                   )}
                 </div>
-                <div className="flex items-center gap-1 mt-6">
+                <div className="flex flex-col items-end gap-1 mt-1">
                   {!locked && (
-                    <button type="button" className="text-muted hover:text-primary" title="Anexar nota fiscal" onClick={() => handleFileUpload(setOrgFiles, i)}>
-                      <Paperclip size={14} />
+                    <button type="button" className="flex items-center gap-1 text-xs text-muted hover:text-primary transition-colors" onClick={() => handleFileUpload(setOrgFiles, i)}>
+                      <Paperclip size={13} /> Anexar nota fiscal
                     </button>
                   )}
                   {!locked && (
-                    <button className="text-muted hover:text-danger" onClick={() => setOrg(prev => prev.filter((_,idx)=>idx!==i))}>
+                    <button className="text-muted hover:text-danger mt-1" onClick={() => setOrg(prev => prev.filter((_,idx)=>idx!==i))}>
                       <Trash2 size={14} />
                     </button>
                   )}

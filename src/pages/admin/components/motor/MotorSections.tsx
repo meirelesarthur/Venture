@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import type { ResultadoMotor } from '@/store/data'
+import type { ResultadoMotor, Talhao } from '@/store/data'
 import type { DetalhesCalculo } from '@/motor'
 import { SubEquacao, ModuloCard } from './MotorEquations'
 
@@ -196,8 +196,8 @@ export function SecaoN2O({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: bool
               { label: 'N volat. sint.', val: `${sn(proj?.nVolatSint, 2)} kg N/ha` },
               { label: 'N volat. org.', val: `${sn(proj?.nVolatOrg, 2)} kg N/ha` },
               { label: 'N volat. total', val: `${sn(proj?.nVolatTotal, 2)} kg N/ha`, destaque: true },
-              { label: 'Frac_GASF usado', val: '—' },
-              { label: 'Frac_GASM', val: '—' },
+              { label: 'Frac_GASF usado', val: sn(proj?.fracGasf) },
+              { label: 'Frac_GASM', val: sn(proj?.fracGasm) },
               { label: 'EF4 (volatil.)', val: sn(proj?.ef4) },
               { label: 'N₂O volatilização', val: `${sn(proj?.n2oVolat)} tCO₂e/ha` },
               { label: 'N lixiviado', val: `${sn(proj?.nLeachTotal, 2)} kg N/ha` },
@@ -307,29 +307,39 @@ export function SecaoCO2({ r, forceOpen }: { r: ResultadoMotor; forceOpen?: bool
       forceOpen={forceOpen}
       filhos={
         <>
-          <SubEquacao ref="Eq.6-7 / Eq.52 VM0042" titulo="1. CO₂ por Combustíveis Fósseis"
-            formula="CO₂_ff = Σ (litros_operação × EF_combustível) / área_ha"
+          <SubEquacao ref="Eq.6-7 VM0042" titulo="1. CO₂ por Combustíveis Fósseis"
+            formula="Eq.6: CO₂_FF_ij = litros_ij × EF_j  |  Eq.7: CO₂_FF = Σ_j CO₂_FF_j / área"
             valores={[
               { label: 'EF Diesel', val: `${sn(proj?.efDiesel)} tCO₂/L` },
               { label: 'EF Gasolina', val: `${sn(proj?.efGasolina)} tCO₂/L` },
               ...(proj?.detalhesCombust ?? []).map(op => ({
-                label: `${op.operacao} (${op.combustivel})`, val: `${sn(op.litros, 1)}L × ${sn(op.efUsado)} = ${sn(op.co2TcO2eHa)} tCO₂/ha`,
+                label: `Eq.6 — ${op.operacao} (${op.combustivel})`, val: `${sn(op.litros, 1)}L × ${sn(op.efUsado)} = ${sn(op.co2TcO2eHa)} tCO₂/ha`,
               })),
-              { label: 'CO₂_ff total', val: `${sn(r.co2FfTco2eHa)} tCO₂e/ha`, destaque: true },
+              ...(proj?.co2ByFuelType
+                ? Object.entries(proj.co2ByFuelType).map(([comb, val]) => ({
+                    label: `Eq.6 subtotal — ${comb}`, val: `${sn(val)} tCO₂/ha`, destaque: false,
+                  }))
+                : []),
+              { label: 'Eq.7 — CO₂_ff total', val: `${sn(r.co2FfTco2eHa)} tCO₂e/ha`, destaque: true },
             ]}
             resultado={`${sn(r.co2FfTco2eHa)} tCO₂e/ha`}
             corResultado="text-warning"
           />
-          <SubEquacao ref="Eq.8-9 / Eq.53 VM0042" titulo="2. CO₂ por Calagem"
-            formula="CO₂_lime = (M_calc × EF_calc + M_dol × EF_dol) × (44/12)"
+          <SubEquacao ref="Eq.8-9 VM0042" titulo="2. CO₂ por Calagem"
+            formula="Eq.8: CO₂_EL_k = M_k × EF_k × (44/12)  |  Eq.9: CO₂_EL = Σ_k CO₂_EL_k / área"
             valores={[
               { label: 'EF Calcítico', val: `${sn(proj?.efCalcitico, 2)} tC/t` },
               { label: 'EF Dolomítico', val: `${sn(proj?.efDolomitico, 2)} tC/t` },
-              { label: 'Fator C→CO₂', val: sn(proj?.fatorCCO2, 4) },
+              { label: 'Fator C→CO₂ (44/12)', val: sn(proj?.fatorCCO2, 4) },
               ...(proj?.detalhesCalc ?? []).map(c => ({
-                label: c.tipo, val: `${sn(c.qtdTHa, 2)} t/ha × ${sn(c.efUsado, 2)} × 3.667 = ${sn(c.co2TcO2eHa)} tCO₂/ha`,
+                label: `Eq.8 — ${c.tipo}`, val: `${sn(c.qtdTHa, 2)} t/ha × ${sn(c.efUsado, 2)} × 3.667 = ${sn(c.co2TcO2eHa)} tCO₂/ha`,
               })),
-              { label: 'CO₂_lime total', val: `${sn(r.co2LimeTco2eHa)} tCO₂e/ha`, destaque: true },
+              ...(proj?.co2ByLimeType
+                ? Object.entries(proj.co2ByLimeType).map(([lime, val]) => ({
+                    label: `Eq.8 subtotal — ${lime}`, val: `${sn(val)} tCO₂/ha`, destaque: false,
+                  }))
+                : []),
+              { label: 'Eq.9 — CO₂_lime total', val: `${sn(r.co2LimeTco2eHa)} tCO₂e/ha`, destaque: true },
             ]}
             resultado={`${sn(r.co2LimeTco2eHa)} tCO₂e/ha`}
             corResultado="text-warning"
@@ -490,9 +500,16 @@ export function exportarCSV(r: ResultadoMotor, talhaoNome: string, areaHa: numbe
     row('CH4', 'Eq.12-13', 'CH4_esterco (tCO2e/ha)', sn(d.ch4Base?.ch4Esterco), sn(d.ch4Proj?.ch4Esterco), 'tCO2e/ha'),
     row('CH4', 'Eq.14', 'MB_queimado (t MS/ha)', '—', sn(d.ch4Proj?.mbQueimado), 't MS/ha'),
     row('CH4', 'Eq.14', 'CH4_queima (tCO2e/ha)', sn(d.ch4Base?.ch4Queima), sn(d.ch4Proj?.ch4Queima), 'tCO2e/ha'),
-    // CO2
-    row('CO2', 'Eq.52', 'CO2_combustiveis (tCO2e/ha)', sn(d.co2Base?.co2Ff), sn(d.co2Proj?.co2Ff), 'tCO2e/ha'),
-    row('CO2', 'Eq.53', 'CO2_calagem (tCO2e/ha)', sn(d.co2Base?.co2Lime), sn(d.co2Proj?.co2Lime), 'tCO2e/ha'),
+    // CO2 — Combustíveis (Eq.6 por tipo → Eq.7 total)
+    ...Object.entries(d.co2Proj?.co2ByFuelType ?? {}).map(([comb, val]) =>
+      row('CO2', 'Eq.6', `CO2_${comb} (tCO2e/ha)`, '—', sn(val), 'tCO2e/ha')
+    ),
+    row('CO2', 'Eq.7', 'CO2_combustiveis_total (tCO2e/ha)', sn(d.co2Base?.co2Ff), sn(d.co2Proj?.co2Ff), 'tCO2e/ha'),
+    // CO2 — Calagem (Eq.8 por corretivo → Eq.9 total)
+    ...Object.entries(d.co2Proj?.co2ByLimeType ?? {}).map(([lime, val]) =>
+      row('CO2', 'Eq.8', `CO2_${lime} (tCO2e/ha)`, '—', sn(val), 'tCO2e/ha')
+    ),
+    row('CO2', 'Eq.9', 'CO2_calagem_total (tCO2e/ha)', sn(d.co2Base?.co2Lime), sn(d.co2Proj?.co2Lime), 'tCO2e/ha'),
     // Créditos
     row('Creditos', 'Eq.37', 'ER_t (tCO2e/ha)', '—', sn(r.erTTco2eHa), 'tCO2e/ha'),
     row('Creditos', 'Eq.40', 'CR_t (tCO2e/ha)', '—', sn(r.crTTco2eHa), 'tCO2e/ha'),
@@ -513,4 +530,86 @@ export function exportarCSV(r: ResultadoMotor, talhaoNome: string, areaHa: numbe
   a.click()
   URL.revokeObjectURL(url)
   toast.success('CSV exportado com sucesso!')
+}
+
+// \u2500\u2500\u2500 Exporta\u00E7\u00E3o CSV Multi-Talh\u00E3o (colunas por talh\u00E3o) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+export function exportarCSVMultiTalhao(resultados: ResultadoMotor[], talhoes: Talhao[], anoAgricola: number) {
+  if (!resultados.length) { toast.error('Nenhum resultado para exportar.'); return }
+
+  const sn = (v: unknown, dec = 6) => typeof v === 'number' ? v.toFixed(dec) : String(v ?? '\u2014')
+
+  // Monta par de colunas base/proj para cada talh\u00E3o \u2014 mesma ordem de linhas
+  type RowBuilder = (r: ResultadoMotor, t: Talhao) => string[]
+  const cols: { talhao: Talhao; result: ResultadoMotor }[] = resultados
+    .map(r => ({ talhao: talhoes.find(t => t.id === r.talhaoId)!, result: r }))
+    .filter(x => x.talhao && (x.result.detalhesCalculo as DetalhesCalculo))
+
+  if (!cols.length) { toast.error('Nenhum resultado com dados intermedi\u00E1rios.'); return }
+
+  // Linha de cabe\u00E7alho com nomes dos talh\u00F5es repetidos (base | proj)
+  const talhoesHeader = cols.flatMap(c => [`${c.talhao.nome} \u2014 Base`, `${c.talhao.nome} \u2014 Proj`])
+  const headerLine = ['MODULO', 'EQUACAO', 'PARAMETRO', ...talhoesHeader, 'UNIDADE'].map(h => `"${h}"`).join(',')
+
+  // Extrai todas as linhas como arrays de [mod, eq, param, base0, proj0, base1, proj1, ..., unit]
+  type RawRow = { mod: string; eq: string; param: string; vals: string[][]; unit: string }
+  const rows: RawRow[] = []
+
+  const addRow = (mod: string, eq: string, param: string, unit: string, getter: (d: DetalhesCalculo, r: ResultadoMotor) => [unknown, unknown]) => {
+    const vals = cols.map(c => {
+      const d = c.result.detalhesCalculo as DetalhesCalculo
+      const [b, p] = getter(d, c.result)
+      return [String(sn(b)), String(sn(p))]
+    })
+    rows.push({ mod, eq, param, vals, unit })
+  }
+
+  // RothC
+  addRow('RothC', '\u00A75.3.9', 'SOC_stock (tC/ha)', 'tC/ha', d => [d.rothcBase?.socTotal, d.rothcProj?.socTotal])
+  addRow('RothC', '\u00A75.3.7', 'IOM (tC/ha)', 'tC/ha', d => [d.rothcBase?.iom, d.rothcProj?.iom])
+  addRow('RothC', '\u00A75.3.8', 'Input_C (tC/ha/ano)', 'tC/ha/ano', d => [d.rothcBase?.inputC, d.rothcProj?.inputC])
+  addRow('RothC', '\u00A75.3.9', 'delta_SOC (tC/ha)', 'tC/ha', d => [d.rothcBase?.deltaSoc, d.rothcProj?.deltaSoc])
+  addRow('RothC', 'Eq.40', 'CR_t (tCO2e/ha)', 'tCO2e/ha', (_, r) => ['\u2014', r.crTTco2eHa])
+  // N2O
+  addRow('N2O', 'Eq.16', 'EF1_usado', '\u2014', d => ['\u2014', d.n2oProj?.ef1Usado])
+  addRow('N2O', 'Eq.17', 'N_sint (kgN/ha)', 'kgN/ha', d => ['\u2014', d.n2oProj?.totalNSint])
+  addRow('N2O', 'Eq.18-20', 'N2O_direto (tCO2e/ha)', 'tCO2e/ha', d => [d.n2oBase?.n2oDireto, d.n2oProj?.n2oDireto])
+  addRow('N2O', 'Eq.21-23', 'N2O_volatilizacao (tCO2e/ha)', 'tCO2e/ha', d => [d.n2oBase?.n2oIndireto, d.n2oProj?.n2oVolat])
+  addRow('N2O', 'Eq.21-23', 'N2O_lixiviacao (tCO2e/ha)', 'tCO2e/ha', d => ['\u2014', d.n2oProj?.n2oLeach])
+  addRow('N2O', 'Eq.26-28', 'N2O_esterco (tCO2e/ha)', 'tCO2e/ha', d => [d.n2oBase?.n2oEsterco, d.n2oProj?.n2oEsterco])
+  // CH4
+  addRow('CH4', 'Eq.11', 'CH4_enterico (tCO2e/ha)', 'tCO2e/ha', d => [d.ch4Base?.ch4Enterico, d.ch4Proj?.ch4Enterico])
+  addRow('CH4', 'Eq.12-13', 'CH4_esterco (tCO2e/ha)', 'tCO2e/ha', d => [d.ch4Base?.ch4Esterco, d.ch4Proj?.ch4Esterco])
+  addRow('CH4', 'Eq.14', 'CH4_queima (tCO2e/ha)', 'tCO2e/ha', d => [d.ch4Base?.ch4Queima, d.ch4Proj?.ch4Queima])
+  // CO2
+  addRow('CO2', 'Eq.7', 'CO2_combustiveis_total (tCO2e/ha)', 'tCO2e/ha', d => [d.co2Base?.co2Ff, d.co2Proj?.co2Ff])
+  addRow('CO2', 'Eq.9', 'CO2_calagem_total (tCO2e/ha)', 'tCO2e/ha', d => [d.co2Base?.co2Lime, d.co2Proj?.co2Lime])
+  // Cr\u00E9ditos
+  addRow('Creditos', 'Eq.37', 'ER_t (tCO2e/ha)', 'tCO2e/ha', (_, r) => ['\u2014', r.erTTco2eHa])
+  addRow('Creditos', 'Eq.40', 'CR_t (tCO2e/ha)', 'tCO2e/ha', (_, r) => ['\u2014', r.crTTco2eHa])
+  addRow('Creditos', 'Eq.74', 'UNC_CO2 (%)', '%', (_, r) => ['\u2014', (r.uncCo2 ?? 0) * 100])
+  addRow('Creditos', 'ERR_net', 'ERR_net (tCO2e/ha)', 'tCO2e/ha', (_, r) => ['\u2014', r.errNetTco2eHa])
+  addRow('Creditos', 'VCUs', 'VCUs_ha (tCO2e/ha)', 'tCO2e/ha', (_, r) => ['\u2014', r.vcusEmitidosHa])
+  addRow('Creditos', 'VCUs', 'VCUs_total (tCO2e)', 'tCO2e', (_, r) => ['\u2014', r.vcusEmitidosTotal])
+
+  const linhas = [
+    '# Venture Carbon \u2014 Exporta\u00E7\u00E3o Multi-Talh\u00E3o',
+    `# Ano Agr\u00EDcola: ${anoAgricola}/${anoAgricola + 1} | Talh\u00F5es: ${cols.map(c => c.talhao.nome).join(', ')}`,
+    '',
+    headerLine,
+    ...rows.map(r => [
+      `"${r.mod}"`, `"${r.eq}"`, `"${r.param}"`,
+      ...r.vals.flatMap(([b, p]) => [`"${b}"`, `"${p}"`]),
+      `"${r.unit}"`,
+    ].join(',')),
+  ]
+
+  const blob = new Blob(['\uFEFF' + linhas.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `calculo_motor_multi_talhao_${anoAgricola}_v${resultados[0].versaoMotor}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  toast.success(`CSV exportado: ${cols.length} talh\u00E3o(\u00F5es)`)
 }

@@ -117,17 +117,16 @@ interface SocFazenda { media: number; sd: number; n: number }
 
 /**
  * Teste-t bilateral de Welch: verifica se SOC do CS e da fazenda são
- * estatisticamente indistinguíveis (α=0.10, IC 90% — VM0042 §8.2)
+ * estatisticamente indistinguíveis (α=0.05, IC 95% — VM0042 §8.2)
  */
 export function testeSocTBilateral(
   cs: SocParams,
   farm: SocFazenda,
-  alpha = 0.10,
+  alpha = 0.05,
 ): { pass: boolean; pvalor: number } {
-  // Deriving SD do CS a partir do IC 90% (t_0.05, df≈n-1)
-  // Para IC 90% bilateral: half-width = t(α/2, df) × SE
-  // Aproximação: se n >= 5 usa z=1.645; caso contrário t-tabela simplificada
-  const tCrit = cs.n >= 30 ? 1.645 : cs.n >= 10 ? 1.812 : cs.n >= 5 ? 2.132 : 2.776
+  // Deriving SD do CS a partir do IC 95% (t_0.025, df≈n-1)
+  // Para IC 95% bilateral: half-width = t(α/2, df) × SE
+  const tCrit = cs.n >= 30 ? 1.96 : cs.n >= 10 ? 2.228 : cs.n >= 5 ? 2.571 : 3.182
   const seCs = (cs.icUpper - cs.icLower) / (2 * tCrit)
   const sdCs = seCs * Math.sqrt(cs.n)
 

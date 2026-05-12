@@ -61,7 +61,7 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
 
   const calculo = useMemo(() => {
     if (!praticas.length || !areaHa) return null
-    const anos = parseInt(horizonte || '10', 10)
+    const anos = parseInt(horizonte || '20', 10)
     const preco_brl = preco_base_usd * ptax
     const valores = praticas.map((p: string) => fatores[p] || SOC_FATOR_FALLBACK).sort((a: number, b: number) => b - a)
     const fC = valores[0] + PRATICA_SECUNDARIA_MULT * valores.slice(1).reduce((a: number, b: number) => a + b, 0)
@@ -92,18 +92,14 @@ export function Step4Praticas({ onNext, onPrev }: { onNext: () => void; onPrev: 
       {/* Horizonte */}
       <div className="bg-surface/50 p-3 rounded-xl border border-border/50 mb-5">
         <Label className="text-xs font-semibold mb-2 block">Horizonte de Projeto:</Label>
-        <RadioGroup value={horizonte} onValueChange={v => setValue('horizonte', v as '10' | '20', { shouldValidate: true })} className="flex gap-4">
-          <div className="flex items-center space-x-1.5">
-            <RadioGroupItem value="10" id="h10" />
-            <Label htmlFor="h10" className="font-medium text-sm cursor-pointer">10 anos</Label>
-          </div>
-          <div className="flex items-center space-x-1.5">
-            <RadioGroupItem value="20" id="h20" />
-            <Label htmlFor="h20" className="font-medium text-sm cursor-pointer">
-              20 anos <span className="text-xs text-primary font-bold ml-1">(Recomendado)</span>
-            </Label>
-          </div>
-        </RadioGroup>
+        <div className="flex items-center gap-2 py-1">
+          <RadioGroup value="20" className="pointer-events-none">
+            <RadioGroupItem value="20" id="h20" checked />
+          </RadioGroup>
+          <Label htmlFor="h20" className="font-medium text-sm">
+            20 anos <span className="text-xs text-primary font-bold ml-1">(Padrão do programa)</span>
+          </Label>
+        </div>
       </div>
 
       {/* Práticas */}

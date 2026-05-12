@@ -53,6 +53,7 @@ export function Step2Area({
   const methods = useFormContext<SimuladorData>()
   const { register, formState: { errors }, watch } = methods
   const [kmlStatus, setKmlStatus] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [kmlCount, setKmlCount] = useState(0)
   const [isDrawing, setIsDrawing] = useState(false)
 
   // Get current location coords for initial map position
@@ -72,25 +73,37 @@ export function Step2Area({
   }
 
   const handleKmlUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string
-      const result = kmlToGeoJson(text)
-      if (!result) {
-        setKmlStatus('error')
-        return
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+
+    let totalHectares = 0
+    let successCount = 0
+    let pending = files.length
+
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const text = ev.target?.result as string
+        const result = kmlToGeoJson(text)
+        if (result) {
+          totalHectares += result.hectares
+          successCount++
+          if (onGeoJsonSelect) onGeoJsonSelect(result.geojson)
+        }
+        pending--
+        if (pending === 0) {
+          if (successCount === 0) {
+            setKmlStatus('error')
+          } else {
+            setKmlStatus('ok')
+            setKmlCount(successCount)
+            methods.setValue('area.hectares', parseFloat(totalHectares.toFixed(2)), { shouldValidate: true })
+          }
+        }
       }
-      setKmlStatus('ok')
-      methods.setValue('area.hectares', parseFloat(result.hectares.toFixed(2)), { shouldValidate: true })
-      
-      if (onGeoJsonSelect) {
-        onGeoJsonSelect(result.geojson)
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = '' // reset input
+      reader.readAsText(file)
+    })
+    e.target.value = ''
   }
 
   return (
@@ -114,13 +127,13 @@ export function Step2Area({
               'flex flex-col items-center justify-center gap-2 h-20 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
               kmlStatus === 'ok' ? 'border-success/40 bg-success/5 text-success' : kmlStatus === 'error' ? 'border-danger/40 bg-danger/5 text-danger' : 'border-border/60 hover:border-primary/40 hover:bg-primary/5 text-muted'
             )}>
-              <input type="file" accept=".kml" className="hidden" onChange={handleKmlUpload} />
+              <input type="file" accept=".kml" multiple className="hidden" onChange={handleKmlUpload} />
               {kmlStatus === 'ok' ? (
-                <><CheckCircle2 size={20} /><span className="text-xs font-medium text-center">Calculado!</span></>
+                <><CheckCircle2 size={20} /><span className="text-xs font-medium text-center">{kmlCount > 1 ? `${kmlCount} arquivos!` : 'Calculado!'}</span></>
               ) : kmlStatus === 'error' ? (
                 <><FileX size={20} /><span className="text-xs text-center">Inválido</span></>
               ) : (
-                <><UploadCloud size={20} /><span className="text-xs text-center">Arquivo .KML</span></>
+                <><UploadCloud size={20} /><span className="text-xs text-center">Arquivo(s) .KML</span></>
               )}
             </label>
           </div>
@@ -134,7 +147,7 @@ export function Step2Area({
             {errors.area?.hectares && <p className="text-sm text-destructive">{errors.area.hectares.message}</p>}
           </div>
           <p className="text-xs text-muted text-center">
-            Mínimo aceito de <strong className="text-primary">500 hectares</strong> de área elegível.
+            Mínimo aceito de <strong className="text-primary">1000 hectares</strong> de área elegível.
           </p>
         </div>
       </div>

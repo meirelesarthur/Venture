@@ -17,7 +17,7 @@ function TickerEstimativa() {
   const area = watch('area.hectares')
   const praticas = watch('praticas') ?? []
   const culturas = watch('culturas') ?? []
-  const horizonte = parseInt(watch('horizonte') || '10', 10)
+  const horizonte = parseInt(watch('horizonte') || '20', 10)
 
   const estimativa = useMemo(() => {
     if (!area || area <= 0) return null
@@ -78,7 +78,7 @@ export default function SimuladorPage() {
     defaultValues: draft ?? {
       localizacao: { fazenda: '', estado: '', municipio: '' },
       lead: { nome: '', email: '', telefone: '' },
-      horizonte: '10',
+      horizonte: '20',
       culturas: [],
       praticas: [],
     },

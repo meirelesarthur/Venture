@@ -237,18 +237,18 @@ export function Step4Panel({ register }: Pick<StepFormProps, 'register'>) {
 export function Step5Panel({ register }: Pick<StepFormProps, 'register'>) {
   return (
     <SectionCard title="SOC — Critério 8 (Teste-t Welch)" stepNum={5}
-      hint="Dados laboratoriais para o teste-t bilateral α=0.10. Mínimo 3 pontos de coleta (VM0042 §6.4).">
+      hint="Dados laboratoriais para o teste-t bilateral α=0.05. Mínimo 3 pontos de coleta (VM0042 §6.4).">
       <div className="grid sm:grid-cols-2 gap-5">
         <Field label="SOC médio (%)" required>
           <Input {...register('soc_medio_pct')} type="number" step="0.001" placeholder="2.450" className="rounded-xl" />
         </Field>
-        <Field label="Nº de amostras (n)" required hint="Mínimo 3 para IC 90% confiável">
+        <Field label="Nº de amostras (n)" required hint="Mínimo 3 para IC 95% confiável">
           <Input {...register('n_amostras_soc')} type="number" step="1" placeholder="5" className="rounded-xl" />
         </Field>
-        <Field label="IC 90% inferior" hint="Limite inferior do intervalo de confiança de 90%">
+        <Field label="IC 95% inferior" hint="Limite inferior do intervalo de confiança de 95%">
           <Input {...register('soc_ic_lower')} type="number" step="0.001" placeholder="2.100" className="rounded-xl" />
         </Field>
-        <Field label="IC 90% superior">
+        <Field label="IC 95% superior">
           <Input {...register('soc_ic_upper')} type="number" step="0.001" placeholder="2.800" className="rounded-xl" />
         </Field>
         <Field label="Data da primeira coleta">
@@ -256,8 +256,8 @@ export function Step5Panel({ register }: Pick<StepFormProps, 'register'>) {
         </Field>
       </div>
       <InfoBox>
-        O motor deriva o SD a partir do IC 90%: SD = (upper − lower) / (2 × t_crit) × √n.
-        O teste-t bilateral de Welch compara SOC do CS com SOC da fazenda. p-valor {'>'} 0.10 = PASS.
+        O motor deriva o SD a partir do IC 95%: SD = (upper − lower) / (2 × t_crit) × √n.
+        O teste-t bilateral de Welch compara SOC do CS com SOC da fazenda. p-valor {'>'} 0.05 = PASS.
       </InfoBox>
     </SectionCard>
   )

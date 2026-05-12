@@ -244,6 +244,28 @@ export default function DashboardPage() {
       {/* O que fazer agora */}
       {nextAction && (() => {
         const { icon: Icon, color, bg, label, desc, link, cta } = nextAction
+        // Banner grande e destacado quando há talhões sem dados de manejo
+        const isManejoUrgente = color === 'text-primary' || color === 'text-danger'
+        if (isManejoUrgente) {
+          return (
+            <div className={`rounded-2xl border-2 ${bg} p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5 shadow-sm`}>
+              <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 bg-background/60 border border-border/40`}>
+                <Icon size={28} className={color} />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className={`text-base font-bold ${color}`}>{label}</p>
+                <p className="text-sm text-muted">{desc}</p>
+                <p className="text-xs text-muted/70">Registre os dados de manejo para habilitar o cálculo dos créditos de carbono.</p>
+              </div>
+              <Button
+                onClick={() => navigate(link)}
+                className="shrink-0 gap-2 h-11 px-6 rounded-xl font-semibold text-sm"
+              >
+                <ClipboardList size={16} /> {cta}
+              </Button>
+            </div>
+          )
+        }
         return (
           <div className={`rounded-xl border ${bg} p-4 flex items-center gap-4`}>
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>

@@ -23,13 +23,13 @@ export const simuladorSchema = z.object({
     telefone: z.string().min(10, 'Telefone inválido'),
   }),
   area: z.object({
-    hectares: z.coerce.number().min(1, 'A área deve ser maior que 0').max(1000000, 'Área muito grande'),
+    hectares: z.coerce.number().min(1000, 'Mínimo de 1000 hectares de área elegível').max(1000000, 'Área muito grande'),
     kmlFile: z.any().optional(),
   }),
   // Culturas gerais da propriedade — sem talhões no simulador
   culturas: z.array(culturaSchema).optional(),
   praticas: z.array(z.string()).optional(),
-  horizonte: z.enum(['10', '20']),
+  horizonte: z.literal('20'),
 })
 
 export type SimuladorData = z.infer<typeof simuladorSchema>

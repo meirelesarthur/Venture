@@ -37,9 +37,11 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
 
     const tco2e_ano = areaHa * Math.max(fCTotal, 0.3) // mínimo 0.3 tCO2e/ha/ano
     const receita_anual_carbono = tco2e_ano * preco_brl * (1 - BUFFER_POOL)
-    const ganho_produtividade = receita_anual_carbono * 0.06
-    const custo_praticas = areaHa * 15
-    const lucro_liquido = receita_anual_carbono + ganho_produtividade - custo_praticas
+    // Composição anual: valores fixos por hectare conforme racional do produto
+    const reducao_custos   = areaHa * 1100  // R$1100/ha redução de custos operacionais
+    const ganho_produt     = areaHa * 440   // R$440/ha aumento de produtividade
+    const custo_manejo     = areaHa * 300   // R$300/ha custo do manejo regenerativo
+    const lucro_liquido = receita_anual_carbono + reducao_custos + ganho_produt - custo_manejo
 
     const chartData = []
     let acumulado = 0
@@ -47,11 +49,12 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
       acumulado += lucro_liquido
       chartData.push({
         ano: `A ${i}`,
-        ganhoCarbono: Math.round(receita_anual_carbono),
-        ganhoProdutividade: Math.round(ganho_produtividade),
-        custo: Math.round(custo_praticas),
-        lucroLiquido: Math.round(lucro_liquido),
-        lucroAcumulado: Math.round(acumulado),
+        ganhoCarbono:    Math.round(receita_anual_carbono),
+        reducaoCustos:   Math.round(reducao_custos),
+        ganhoProdut:     Math.round(ganho_produt),
+        custoManejo:     Math.round(custo_manejo),
+        lucroLiquido:    Math.round(lucro_liquido),
+        lucroAcumulado:  Math.round(acumulado),
       })
     }
 
@@ -141,15 +144,19 @@ export function Step6Resultado({ onPrev }: { onPrev: () => void }) {
         <div className="p-2 grid grid-cols-1 gap-1.5 text-xs">
           <div className="flex justify-between items-center px-2 py-1.5 bg-success/5 rounded border border-success/20">
             <span className="text-success/80 text-[11px]">Rec. Carbono</span>
-            <span className="font-bold text-success text-[11px]">{fmt(receitas[0]?.ganhoCarbono ?? 0)}</span>
+            <span className="font-bold text-success text-[11px]">+ {fmt(receitas[0]?.ganhoCarbono ?? 0)}</span>
           </div>
           <div className="flex justify-between items-center px-2 py-1.5 bg-primary/5 rounded border border-primary/20">
-            <span className="text-primary/80 text-[11px]">Produtividade</span>
-            <span className="font-bold text-primary text-[11px]">{fmt(receitas[0]?.ganhoProdutividade ?? 0)}</span>
+            <span className="text-primary/80 text-[11px]">Redução de Custos</span>
+            <span className="font-bold text-primary text-[11px]">+ {fmt(receitas[0]?.reducaoCustos ?? 0)}</span>
+          </div>
+          <div className="flex justify-between items-center px-2 py-1.5 bg-primary/5 rounded border border-primary/20">
+            <span className="text-primary/80 text-[11px]">Ganho Produtividade</span>
+            <span className="font-bold text-primary text-[11px]">+ {fmt(receitas[0]?.ganhoProdut ?? 0)}</span>
           </div>
           <div className="flex justify-between items-center px-2 py-1.5 bg-danger/5 rounded border border-danger/20">
             <span className="text-danger/80 text-[11px]">Custo Práticas</span>
-            <span className="font-bold text-danger text-[11px]">- {fmt(receitas[0]?.custo ?? 0)}</span>
+            <span className="font-bold text-danger text-[11px]">- {fmt(receitas[0]?.custoManejo ?? 0)}</span>
           </div>
         </div>
       </Card>
