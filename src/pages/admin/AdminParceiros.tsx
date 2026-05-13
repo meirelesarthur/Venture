@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, Mail, Link as LinkIcon, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { useDataStore } from '@/store/data'
+import type { ComissaoModalidade } from '@/store/data'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -81,7 +83,8 @@ export default function AdminParceiros() {
               <TableRow>
                 <TableHead>Parceiro</TableHead>
                 <TableHead>Contato</TableHead>
-                <TableHead className="text-center">Comissão (%)</TableHead>
+                <TableHead className="text-center">Modalidade</TableHead>
+                <TableHead className="text-center">Valor Comissão</TableHead>
                 <TableHead className="text-center">Leads Gerados</TableHead>
                 <TableHead className="text-right">Comissão Total</TableHead>
                 <TableHead className="text-center">Status</TableHead>
@@ -98,15 +101,41 @@ export default function AdminParceiros() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Input 
-                        type="number" 
-                        defaultValue={p.comissaoPercentual ?? 100}
-                        className="w-16 h-8 text-center text-xs"
-                        onBlur={(e) => updateParceiro(p.id, { comissaoPercentual: Number(e.target.value) })}
-                      />
-                      <span className="text-xs text-muted-foreground">%</span>
-                    </div>
+                    <Select
+                      value={p.comissaoModalidade ?? 'percentual'}
+                      onValueChange={(v: ComissaoModalidade) => updateParceiro(p.id, { comissaoModalidade: v })}
+                    >
+                      <SelectTrigger className="w-32 h-8 text-xs rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentual">% Recebíveis</SelectItem>
+                        <SelectItem value="usd_fixo">US$ fixo/lead</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {(p.comissaoModalidade ?? 'percentual') === 'percentual' ? (
+                      <div className="flex items-center justify-center gap-1">
+                        <Input
+                          type="number"
+                          defaultValue={p.comissaoPercentual ?? 4}
+                          className="w-16 h-8 text-center text-xs"
+                          onBlur={(e) => updateParceiro(p.id, { comissaoPercentual: Number(e.target.value) })}
+                        />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-xs text-muted-foreground">US$</span>
+                        <Input
+                          type="number"
+                          defaultValue={p.comissaoUsdFixo ?? 50}
+                          className="w-20 h-8 text-center text-xs"
+                          onBlur={(e) => updateParceiro(p.id, { comissaoUsdFixo: Number(e.target.value) })}
+                        />
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-center font-medium">{p.leadsGerados}</TableCell>
                   <TableCell className="text-right font-medium text-success">

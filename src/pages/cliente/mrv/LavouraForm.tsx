@@ -12,10 +12,12 @@ import { toast } from 'sonner'
 import { v4 as uuidv4 } from 'uuid'
 
 const CULTURAS = ['soja','milho','trigo','algodao','arroz','sorgo','cafe','pastagem_braquiaria','pastagem_coloniao','cana','outro']
+const SAFRINHA_CULTURAS = [...CULTURAS, 'planta_cobertura']
 const LABEL_CULTURA: Record<string,string> = {
   soja: 'Soja', milho: 'Milho', trigo: 'Trigo', arroz: 'Arroz', sorgo: 'Sorgo',
   cafe: 'Café', pastagem_braquiaria: 'Pastagem – Braquiária', pastagem_coloniao: 'Pastagem – Colonião',
-  cana: 'Cana-de-açúcar', algodao: 'Algodão', outro: 'Outro'
+  cana: 'Cana-de-açúcar', algodao: 'Algodão', outro: 'Outro',
+  planta_cobertura: 'Planta de Cobertura',
 }
 const PREP_SOLO = ['convencional','reduzido','direto']
 const LABEL_PREP: Record<string,string> = { convencional: 'Convencional', reduzido: 'Cultivo Reduzido', direto: 'Plantio Direto' }
@@ -172,9 +174,18 @@ export default function LavouraForm({ talhaoIds, fazendaId, anoAgricola, locked 
                     <Select value={cultura.safrinhaNome || ''} onValueChange={v => handleUpdateCultura(cultura.id, 'safrinhaNome', v)} disabled={locked}>
                       <SelectTrigger className="rounded-xl bg-surface"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
-                        {CULTURAS.map(c => <SelectItem key={c} value={c}>{LABEL_CULTURA[c]}</SelectItem>)}
+                        {SAFRINHA_CULTURAS.map(c => <SelectItem key={c} value={c}>{LABEL_CULTURA[c]}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {cultura.safrinhaNome === 'planta_cobertura' && (
+                      <Input
+                        placeholder="Qual planta? Ex: braquiária ruziziensis, crotalária, milheto..."
+                        value={cultura.safrinhaCoberturaEspecie || ''}
+                        onChange={e => handleUpdateCultura(cultura.id, 'safrinhaCoberturaEspecie', e.target.value)}
+                        disabled={locked}
+                        className="rounded-xl bg-surface text-sm mt-1"
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-2">

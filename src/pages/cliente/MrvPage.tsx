@@ -18,10 +18,10 @@ import KmlUploader from '@/components/maps/KmlUploader'
 import FazendaMap from '@/components/maps/FazendaMap'
 import { MapDemarcationOverlay } from '@/components/MapDemarcationOverlay'
 import {
-  Leaf, Droplets, Tractor, FileText,
+  Leaf, Droplets, Tractor,
   Lock, Send, MapPin, Thermometer,
   PlusCircle, Settings2, Map, ChevronRight,
-  Check, MoreVertical, Trash2,
+  Check, MoreVertical, Trash2, AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TalhaoEditModal, DeleteTalhaoModal, SubmitConfirmModal } from './mrv/MrvModals'
@@ -34,6 +34,8 @@ import {
 const CURRENT_YEAR = new Date().getFullYear()
 const ANOS = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2, CURRENT_YEAR - 3]
 
+type FazendaTab = 'mapa' | 'lavoura' | 'pecuaria' | 'fertilizacao' | 'operacional'
+
 export default function MrvPage() {
   const { talhoes, fazendas, addTalhao, manejo, submitManejo, updateFazenda } = useDataStore()
   const projetoTalhoes = talhoes.filter(t => t.tipo === 'projeto')
@@ -43,8 +45,7 @@ export default function MrvPage() {
   const [anoAgricola, setAnoAgricola] = useState(CURRENT_YEAR)
   const isYearLocked = anoAgricola < CURRENT_YEAR
 
-  const [areaTab, setAreaTab] = useState<'mapa' | 'fertilizacao' | 'operacional' | 'documentos'>('mapa')
-  const [manejoTab, setManejoTab] = useState<'lavoura' | 'pecuaria'>('lavoura')
+  const [fazendaTab, setFazendaTab] = useState<FazendaTab>('mapa')
 
   const [editingTalhao, setEditingTalhao] = useState<string | null>(null)
   const [deletingTalhao, setDeletingTalhao] = useState<string | null>(null)
@@ -63,6 +64,9 @@ export default function MrvPage() {
 
   const primeiroManejo = manejo.find(m => m.talhaoId === selectedTalhoes[0] && m.anoAgricola === anoAgricola && m.cenario === 'projeto')
   const locked = primeiroManejo?.status === 'aprovado' || isYearLocked
+
+  // Bloqueio: só pode avançar da etapa 1 se houver ao menos 1 talhão
+  const canAdvanceFromTalhoes = projetoTalhoes.length > 0
 
   const handleSubmit = () => {
     if (!selectedTalhoes.length) { toast.error('Nenhum talhão selecionado.'); return }
@@ -113,16 +117,58 @@ export default function MrvPage() {
     })
   }
 
-  const areaTabItems = [
+  const fazendaTabItems: { id: FazendaTab; label: string; icon: React.ElementType }[] = [
     { id: 'mapa', label: 'Mapa & KML', icon: Map },
+    { id: 'lavoura', label: 'Lavoura', icon: Leaf },
+    { id: 'pecuaria', label: 'Pecuária', icon: Tractor },
     { id: 'fertilizacao', label: 'Fertilização', icon: Droplets },
     { id: 'operacional', label: 'Máquinas', icon: Settings2 },
-    { id: 'documentos', label: 'Evidências', icon: FileText },
-  ] as const
+  ]
 
-  const backLabel = etapa === 2 ? 'Área da Fazenda' : 'Talhões'
-  const nextLabel = etapa === 1 ? 'Talhões' : 'Manejo'
+  const backLabel = etapa === 2 ? 'Talhões' : 'Fazenda'
+  const nextLabel = etapa === 1 ? 'Fazenda' : 'Evidências'
   const isLastStep = etapa === 3
+
+  const TalhoesSelector = () => (
+    <div className="px-6 py-3 border-b border-border/50 bg-surface/10 space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {projetoTalhoes.map(t => {
+          const isSel = selectedTalhoes.includes(t.id)
+          const progress = getManejoProgress(t.id, manejo, anoAgricola)
+          return (
+            <button
+              key={t.id}
+              title={PROGRESS_TOOLTIP[progress]}
+              onClick={() => toggleTalhao(t.id)}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all',
+                isSel
+                  ? 'bg-primary/10 border-primary text-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+              )}
+            >
+              <div className={cn('w-4 h-4 rounded border-2 flex items-center justify-center shrink-0', isSel ? 'bg-primary border-primary' : 'border-muted-foreground/40')}>
+                {isSel && <Check size={10} className="text-white" />}
+              </div>
+              <span className={cn('w-2 h-2 rounded-full shrink-0', PROGRESS_DOT[progress])} />
+              {t.nome}
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span>{selectedTalhoes.length} selecionado(s)</span>
+        <span>·</span>
+        <button className="text-primary hover:underline" onClick={() => setSelectedTalhoes(projetoTalhoes.map(t => t.id))}>Todos</button>
+        {selectedTalhoes.length > 1 && (
+          <>
+            <span>·</span>
+            <button className="hover:underline hover:text-foreground" onClick={() => setSelectedTalhoes([projetoTalhoes[0].id])}>Limpar</button>
+          </>
+        )}
+      </div>
+    </div>
+  )
 
   const StickyFooter = () => (
     <div className="sticky bottom-0 border-t border-border/50 bg-background/95 backdrop-blur-sm px-6 py-3.5 flex items-center gap-4 z-10">
@@ -136,10 +182,7 @@ export default function MrvPage() {
       </Button>
       <div className="flex-1 flex justify-center">
         {etapa > 1 && (
-          <button
-            onClick={() => setEtapa(e => e - 1)}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button onClick={() => setEtapa(e => e - 1)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             ← {backLabel}
           </button>
         )}
@@ -157,8 +200,13 @@ export default function MrvPage() {
       ) : (
         <Button
           size="sm"
-          onClick={() => setEtapa(e => e + 1)}
-          disabled={etapa === 2 && projetoTalhoes.length === 0}
+          onClick={() => {
+            if (etapa === 1 && !canAdvanceFromTalhoes) {
+              toast.error('Cadastre ao menos um talhão antes de continuar.')
+              return
+            }
+            setEtapa(e => e + 1)
+          }}
           className="rounded-xl h-9 gap-1.5"
         >
           Ir para {nextLabel} <ChevronRight size={13} />
@@ -226,69 +274,13 @@ export default function MrvPage() {
             )}
           </div>
 
-          {/* ETAPA 1 — Área da Fazenda */}
+          {/* ── ETAPA 1 — Talhões ─────────────────────────── */}
           {etapa === 1 && (
-            <div className="flex-1 flex flex-col">
-              <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
-                {areaTabItems.map(t => (
-                  <button
-                    key={t.id}
-                    role="tab"
-                    aria-selected={areaTab === t.id}
-                    onClick={() => setAreaTab(t.id)}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
-                      areaTab === t.id
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                    )}
-                  >
-                    <t.icon size={14} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                {areaTab === 'mapa' && (
-                  <div className="space-y-5">
-                    <div>
-                      <h3 className="text-base font-bold mb-1">Área da Propriedade</h3>
-                      <p className="text-sm text-muted">Faça upload do KML ou visualize a área no mapa.</p>
-                    </div>
-                    {/* Side-by-side em telas grandes: 30% KML · 70% mapa */}
-                    <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-                      <div className="lg:w-[30%] h-full">
-                        <KmlUploader onLoad={handleKmlLoad} label="Carregar KML da fazenda" className="h-full" />
-                      </div>
-                      <div className="lg:w-[70%] rounded-xl overflow-hidden border border-border/50 min-h-[280px]">
-                        <FazendaMap talhoes={projetoTalhoes} height="100%" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {areaTab === 'fertilizacao' && (
-                  <FertilizacaoForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
-                )}
-                {areaTab === 'operacional' && (
-                  <OperacionalForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
-                )}
-                {areaTab === 'documentos' && (
-                  <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
-                )}
-              </div>
-
-              <StickyFooter />
-            </div>
-          )}
-
-          {/* ETAPA 2 — Talhões */}
-          {etapa === 2 && (
             <div className="flex-1 flex flex-col">
               <div className="flex-1 p-6 space-y-4 overflow-y-auto">
                 <div>
                   <h3 className="text-base font-bold">Talhões da Fazenda</h3>
-                  <p className="text-sm text-muted">Crie e gerencie os talhões. Cada talhão terá seu próprio manejo.</p>
+                  <p className="text-sm text-muted">Cadastre os talhões e faça upload do KML de cada um. O polígono é obrigatório para avançar.</p>
                 </div>
 
                 {isYearLocked && (
@@ -297,38 +289,43 @@ export default function MrvPage() {
                   </div>
                 )}
 
+                {!canAdvanceFromTalhoes && (
+                  <div className="flex items-center gap-2 text-xs text-muted bg-surface/50 border border-border/40 rounded-lg px-4 py-2">
+                    <AlertCircle size={12} className="text-warning" /> Cadastre ao menos um talhão com polígono para avançar para a Etapa 2.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
                   {projetoTalhoes.map(t => {
                     const { lavoura, pecuaria } = getManejoStatus(t.id, manejo, anoAgricola)
+                    const hasKml = !!(t.kmlGeoJsons?.length)
                     return (
-                      <Card key={t.id} className="group border-border/50 relative">
+                      <Card key={t.id} className={cn('group border-border/50 relative', hasKml && 'border-success/30')}>
                         <CardContent className="p-5">
                           <div className="flex justify-between items-start mb-3">
-                            <div
-                              className="flex-1 cursor-pointer"
-                              onClick={() => !isYearLocked && setEditingTalhao(t.id)}
-                            >
-                              <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">{t.nome}</h3>
+                            <div className="flex-1 cursor-pointer" onClick={() => !isYearLocked && setEditingTalhao(t.id)}>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">{t.nome}</h3>
+                                {hasKml ? (
+                                  <span className="text-[10px] font-medium text-success bg-success/10 border border-success/20 px-1.5 py-0.5 rounded">{t.kmlGeoJsons!.length} KML</span>
+                                ) : (
+                                  <span className="text-[10px] font-medium text-warning bg-warning/10 border border-warning/20 px-1.5 py-0.5 rounded">Sem polígono</span>
+                                )}
+                              </div>
                               <p className="text-sm text-muted">{t.areaHa} ha</p>
                             </div>
                             {!isYearLocked && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <button
-                                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors"
-                                    onClick={e => e.stopPropagation()}
-                                  >
+                                  <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors" onClick={e => e.stopPropagation()}>
                                     <MoreVertical size={15} />
                                   </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-40">
                                   <DropdownMenuItem onClick={() => setEditingTalhao(t.id)}>
-                                    <Settings2 size={13} className="mr-2" /> Editar
+                                    <Settings2 size={13} className="mr-2" /> Editar / KML
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-danger focus:text-danger"
-                                    onClick={() => setDeletingTalhao(t.id)}
-                                  >
+                                  <DropdownMenuItem className="text-danger focus:text-danger" onClick={() => setDeletingTalhao(t.id)}>
                                     <Trash2 size={13} className="mr-2" /> Remover
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -347,7 +344,8 @@ export default function MrvPage() {
                   {!isYearLocked && (
                     <Card
                       className="border-dashed border-border/60 bg-surface/20 opacity-60 hover:opacity-100 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[130px] gap-2"
-                      onClick={() => setIsDemarcando(true)}>
+                      onClick={() => setIsDemarcando(true)}
+                    >
                       <PlusCircle size={28} className="text-muted" />
                       <p className="text-sm font-medium text-muted">Demarcar Talhão no Mapa</p>
                     </Card>
@@ -359,101 +357,74 @@ export default function MrvPage() {
             </div>
           )}
 
-          {/* ETAPA 3 — Manejo por Talhão */}
-          {etapa === 3 && (
+          {/* ── ETAPA 2 — Fazenda + Manejo ────────────────── */}
+          {etapa === 2 && (
             <div className="flex-1 flex flex-col">
-              <div className="px-6 py-4 border-b border-border/50 bg-surface/10 space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {projetoTalhoes.map(t => {
-                    const isSel = selectedTalhoes.includes(t.id)
-                    const progress = getManejoProgress(t.id, manejo, anoAgricola)
-                    return (
-                      <button
-                        key={t.id}
-                        title={PROGRESS_TOOLTIP[progress]}
-                        onClick={() => toggleTalhao(t.id)}
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all min-h-[44px]',
-                          isSel
-                            ? 'bg-primary/10 border-primary text-primary'
-                            : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                        )}
-                      >
-                        <div className={cn(
-                          'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
-                          isSel ? 'bg-primary border-primary' : 'border-muted-foreground/40'
-                        )}>
-                          {isSel && <Check size={10} className="text-white" />}
-                        </div>
-                        <span className={cn('w-2 h-2 rounded-full shrink-0', PROGRESS_DOT[progress])} />
-                        {t.nome}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>{selectedTalhoes.length} selecionado(s)</span>
-                  <span>·</span>
-                  <button
-                    className="text-primary hover:underline"
-                    onClick={() => setSelectedTalhoes(projetoTalhoes.map(t => t.id))}
-                  >
-                    Selecionar todos
-                  </button>
-                  {selectedTalhoes.length > 1 && (
-                    <>
-                      <span>·</span>
-                      <button
-                        className="hover:underline hover:text-foreground"
-                        onClick={() => setSelectedTalhoes([projetoTalhoes[0].id])}
-                      >
-                        Limpar
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+              {/* Seletor de talhões em lote — sempre visível */}
+              <TalhoesSelector />
 
-              <div className="flex border-b border-border/50 px-6 bg-surface/10" role="tablist">
-                {(() => {
-                  const selectedManejo = manejo.filter(m =>
-                    selectedTalhoes.includes(m.talhaoId ?? '') && m.anoAgricola === anoAgricola && m.cenario === 'projeto'
-                  )
-                  const lavouraHasData = selectedManejo.some(m => m.cultura || (m.culturas && m.culturas.length > 0) || m.dataPlantio)
-                  const pecuariaHasData = selectedManejo.some(m => m.pecuaria && m.pecuaria.length > 0)
-                  return [
-                    { id: 'lavoura',  label: 'Lavoura',  icon: Leaf,    hasData: lavouraHasData  },
-                    { id: 'pecuaria', label: 'Pecuária', icon: Tractor, hasData: pecuariaHasData },
-                  ].map(item => (
-                    <button
-                      key={item.id}
-                      role="tab"
-                      aria-selected={manejoTab === item.id}
-                      onClick={() => setManejoTab(item.id as typeof manejoTab)}
-                      className={cn(
-                        'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px',
-                        manejoTab === item.id
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                      )}
-                    >
-                      <item.icon size={14} />
-                      {item.label}
-                      <span className={cn('w-2 h-2 rounded-full shrink-0', item.hasData ? 'bg-success' : 'bg-muted-foreground/25')} />
-                    </button>
-                  ))
-                })()}
+              {/* Abas de manejo */}
+              <div className="flex border-b border-border/50 px-6 bg-surface/10 overflow-x-auto scrollbar-hide" role="tablist">
+                {fazendaTabItems.map(t => (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={fazendaTab === t.id}
+                    onClick={() => setFazendaTab(t.id)}
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap',
+                      fazendaTab === t.id
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    )}
+                  >
+                    <t.icon size={14} />
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
-                {manejoTab === 'lavoura' && (
+                {fazendaTab === 'mapa' && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-base font-bold mb-1">Área da Propriedade</h3>
+                      <p className="text-sm text-muted">Faça upload do KML geral da fazenda ou visualize os talhões no mapa.</p>
+                    </div>
+                    <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+                      <div className="lg:w-[30%] h-full">
+                        <KmlUploader onLoad={handleKmlLoad} label="Carregar KML da fazenda" className="h-full" />
+                      </div>
+                      <div className="lg:w-[70%] rounded-xl overflow-hidden border border-border/50 min-h-[280px]">
+                        <FazendaMap talhoes={projetoTalhoes} height="100%" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {fazendaTab === 'lavoura' && (
                   <LavouraForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
-                {manejoTab === 'pecuaria' && (
+                {fazendaTab === 'pecuaria' && (
                   <PecuariaForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                )}
+                {fazendaTab === 'fertilizacao' && (
+                  <FertilizacaoForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+                )}
+                {fazendaTab === 'operacional' && (
+                  <OperacionalForm key={selectedTalhoes.join(',') + '-' + anoAgricola} talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
                 )}
               </div>
 
+              <StickyFooter />
+            </div>
+          )}
+
+          {/* ── ETAPA 3 — Evidências ──────────────────────── */}
+          {etapa === 3 && (
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 overflow-y-auto p-6">
+                <DocumentosForm talhaoIds={selectedTalhoes} fazendaId={fazenda.id} anoAgricola={anoAgricola} locked={locked} />
+              </div>
               <StickyFooter />
             </div>
           )}

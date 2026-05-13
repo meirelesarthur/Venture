@@ -1,6 +1,6 @@
 import type { DadosManejoAnual } from '@/store/data'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, ChevronRight, Map, Layers, Leaf } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Layers, Map, FileText } from 'lucide-react'
 
 // ── getManejoStatus ───────────────────────────────────────────────────────────
 
@@ -93,9 +93,9 @@ export const YEAR_STATUS_TITLE: Record<YearStatus, string> = {
 
 export function StepIndicator({ current, onGoTo }: { current: number; onGoTo: (n: number) => void }) {
   const steps = [
-    { n: 1, label: 'Área da Fazenda', icon: Map },
-    { n: 2, label: 'Talhões', icon: Layers },
-    { n: 3, label: 'Manejo', icon: Leaf },
+    { n: 1, label: 'Talhões', icon: Layers },
+    { n: 2, label: 'Fazenda', icon: Map },
+    { n: 3, label: 'Evidências', icon: FileText },
   ]
   return (
     <div className="flex items-center gap-0 px-6 py-4 border-b border-border/50 bg-surface/20">

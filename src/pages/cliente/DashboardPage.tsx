@@ -499,7 +499,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <p className="text-xs text-success/80 mb-1">VCUs Projetados (10 anos)</p>
+              <p className="text-xs text-success/80 mb-1">VCUs Projetados (20 anos)</p>
               <p className="text-3xl font-bold text-success">{totalVcus.toLocaleString('pt-BR')}</p>
               <p className="text-xs text-success/70">tCO₂e elegíveis</p>
             </div>

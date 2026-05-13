@@ -85,7 +85,7 @@ export function Step3Cultura({ onNext, onPrev }: { onNext: () => void; onPrev: (
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-normal cursor-pointer" htmlFor={`org-${field.id}`}>Uso de organomineral?</Label>
+                      <Label className="text-xs font-normal cursor-pointer" htmlFor={`org-${field.id}`}>Uso de orgânico mineral / composto?</Label>
                       <Switch 
                         id={`org-${field.id}`} 
                         checked={field.usa_org} 

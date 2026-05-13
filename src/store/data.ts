@@ -13,6 +13,7 @@ export type {
   Parceiro, ColetaSolo, CampoAlterado, EventoHistorico,
   ParametroSistema, ResultadoMotor, DadoClimatico,
   Notificacao, Alerta, UserRole, AppUser,
+  ComissaoModalidade, BaselineProjeto,
 } from './types'
 
 import type {
@@ -20,7 +21,7 @@ import type {
   Lead, Fazenda, Talhao, DadosManejoAnual, Cliente, Comissao,
   ControlSite, MatchResult, Parceiro, ColetaSolo, EventoHistorico,
   ParametroSistema, ResultadoMotor, DadoClimatico,
-  Notificacao, Alerta, AppUser,
+  Notificacao, Alerta, AppUser, BaselineProjeto,
 } from './types'
 
 import {
@@ -50,6 +51,7 @@ interface DataState {
   usuarios: AppUser[]
   coletasSolo: ColetaSolo[]
   historicoFazendas: EventoHistorico[]
+  baselines: BaselineProjeto[]
 
   // Parceiros
   addParceiro: (p: Omit<Parceiro, 'id'>) => void
@@ -114,6 +116,10 @@ interface DataState {
   addUsuario: (u: Omit<AppUser, 'id'>) => void
   updateUsuario: (id: string, changes: Partial<AppUser>) => void
 
+  // Baseline imutável
+  submeterBaseline: (fazendaId: string, resultados: ResultadoMotor[]) => BaselineProjeto
+  getBaselineByFazenda: (fazendaId: string) => BaselineProjeto | undefined
+
   // Util
   resetToInitialData: () => void
 }
@@ -138,6 +144,7 @@ const initialState = () => ({
   coletasSolo: [] as ColetaSolo[],
   historicoFazendas: initialHistorico,
   matchResults: [] as MatchResult[],
+  baselines: [] as BaselineProjeto[],
 })
 
 export const useDataStore = create<DataState>()(
@@ -448,12 +455,34 @@ export const useDataStore = create<DataState>()(
           usuarios: state.usuarios.map((u) => u.id === id ? { ...u, ...changes } : u),
         })),
 
+      // ── Baseline imutável ─────────────────────────────────────
+      submeterBaseline: (fazendaId, resultados) => {
+        if (get().baselines.some(b => b.fazendaId === fazendaId)) {
+          throw new Error('Baseline já submetida — imutável')
+        }
+        const totalTco2e = resultados.reduce((sum, r) => sum + r.vcusEmitidosTotal, 0)
+        const baseline: BaselineProjeto = {
+          id: uuidv4(),
+          fazendaId,
+          resultadoSnapshot: resultados,
+          totalTco2e,
+          submetidaEm: new Date().toISOString(),
+          submetidaPor: 'admin',
+          imutavel: true,
+        }
+        set(s => ({ baselines: [...s.baselines, baseline] }))
+        return baseline
+      },
+
+      getBaselineByFazenda: (fazendaId) =>
+        get().baselines.find(b => b.fazendaId === fazendaId),
+
       // ── Util ──────────────────────────────────────────────────
       resetToInitialData: () => set(initialState()),
     }),
     {
       name: 'venture-carbon-data',
-      version: 5,
+      version: 6,
       migrate: () => initialState(),
     }
   )

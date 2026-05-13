@@ -59,6 +59,7 @@ export interface Talhao {
   latCenter?: number
   lngCenter?: number
   socTimestamp?: string
+  kmlGeoJsons?: FeatureCollection[]
 }
 
 export interface FertilizanteSint { tipo: string; qtdKgHa: number; usaInibidor: boolean; outroNome?: string }
@@ -79,6 +80,8 @@ export interface CulturaManejo {
   unidadeProd?: 'sacas_ha' | 't_ha'
   hasSafrinha?: boolean
   safrinhaNome?: string
+  safrinhaTipo?: string
+  safrinhaCoberturaEspecie?: string
   safrinhaDataPlantio?: string
   safrinhaDataColheita?: string
   safrinhaProdutividade?: number
@@ -242,6 +245,8 @@ export interface MatchResult {
   criteriosPendentes: string[]
 }
 
+export type ComissaoModalidade = 'usd_fixo' | 'percentual'
+
 export interface Parceiro {
   id: string
   userId?: string
@@ -251,6 +256,8 @@ export interface Parceiro {
   comissaoTotal: number
   hectaresCarteira?: number
   status: 'ativo' | 'convidado'
+  comissaoModalidade?: ComissaoModalidade
+  comissaoUsdFixo?: number
   comissaoPercentual?: number
 }
 
@@ -370,4 +377,15 @@ export interface AppUser {
   email: string
   role: UserRole
   status: 'Ativo' | 'Bloqueado'
+}
+
+export interface BaselineProjeto {
+  id: string
+  fazendaId: string
+  projetoId?: string
+  resultadoSnapshot: ResultadoMotor[]
+  totalTco2e: number
+  submetidaEm: string
+  submetidaPor: string
+  imutavel: true
 }

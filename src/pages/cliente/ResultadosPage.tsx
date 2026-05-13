@@ -41,13 +41,12 @@ export default function ResultadosPage() {
     ano: `${ano}/${Number(ano)+1}`, vcus, receita: vcus * precoUsd * ptax,
   }))
 
-  // Projeção 10 anos se tivermos VCUs
   const vcuHaRef = totalVcuMotor > 0
     ? meusResultados.reduce((a, r) => a + r.vcusEmitidosHa, 0) / meusResultados.length
     : 2.2
   const areaTotal = meusTalhoes.reduce((a, t) => a + t.areaHa, 0)
 
-  const projecao10anos = Array.from({ length: 10 }, (_, i) => {
+  const projecao10anos = Array.from({ length: 20 }, (_, i) => {
     const anoLabel = `${2026 + i}`
     const vcusProj = vcuHaRef * areaTotal * (1 + i * 0.02)  // crescimento 2% a.a.
     return {
@@ -116,7 +115,7 @@ export default function ResultadosPage() {
         <Card className="p-6 border-border/50 bg-surface">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp size={16} className="text-warning" />
-            <h4 className="text-sm font-medium text-muted">Projeção 10 anos</h4>
+            <h4 className="text-sm font-medium text-muted">Projeção 20 anos</h4>
           </div>
           <p className="text-3xl font-bold text-primary">
             {projecao10anos.reduce((a,b) => a+b.vcus, 0).toLocaleString('pt-BR')} <span className="text-sm font-normal text-muted">tCO₂e</span>
@@ -131,7 +130,7 @@ export default function ResultadosPage() {
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b bg-surface/50 pb-4">
             <CardTitle className="text-base">
-              {anosHistorico.length > 0 ? 'VCUs por Safra (Motor)' : 'Projeção VCUs — 10 Anos'}
+              {anosHistorico.length > 0 ? 'VCUs por Safra (Motor)' : 'Projeção VCUs — 20 Anos'}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -152,7 +151,7 @@ export default function ResultadosPage() {
         {/* Receita acumulada projetada */}
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b bg-surface/50 pb-4">
-            <CardTitle className="text-base">Receita Acumulada Projetada (10 anos)</CardTitle>
+            <CardTitle className="text-base">Receita Acumulada Projetada (20 anos)</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="h-60">
