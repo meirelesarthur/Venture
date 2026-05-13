@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Send, MapPin, Leaf, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Send, MapPin, Leaf, Eye, EyeOff, CheckCircle2, DollarSign, Percent } from 'lucide-react'
 import { useDataStore } from '@/store/data'
+import type { ComissaoModalidade } from '@/store/data'
 import { useAuthStore } from '@/store/auth'
 import { toast } from 'sonner'
 
@@ -32,11 +33,15 @@ interface PraticaSelecionada {
 
 export default function NovoLeadPage() {
   const navigate = useNavigate()
-  const addLead  = useDataStore(s => s.addLead)
+  const { addLead, parceiros, updateParceiro } = useDataStore()
   const { user } = useAuthStore()
+
+  const parceiro = parceiros.find(p => p.id === user?.id || p.userId === user?.id || p.email === user?.email)
+
   const [loading, setLoading] = useState(false)
   const [showComissao, setShowComissao] = useState(false)
   const [submitted, setSubmitted] = useState<{ nome: string; fazenda: string; area: number } | null>(null)
+  const [modalidade, setModalidade] = useState<ComissaoModalidade>(parceiro?.comissaoModalidade ?? 'usd_fixo')
 
   const [nome, setNome]           = useState('')
   const [email, setEmail]         = useState('')
@@ -65,7 +70,15 @@ export default function NovoLeadPage() {
   }
 
   const areaNum = parseFloat(area.replace(',','.')) || 0
-  const comissaoAno0 = areaNum > 0 ? (areaNum * 1 * 5.65).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : null
+  const PTAX = 5.65
+  const usdFixo = parceiro?.comissaoUsdFixo ?? 1
+  const pctVal  = parceiro?.comissaoPercentual ?? 4
+
+  const comissaoPreviewBrl = areaNum > 0
+    ? modalidade === 'usd_fixo'
+      ? (areaNum * usdFixo * PTAX).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      : null
+    : null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,6 +97,9 @@ export default function NovoLeadPage() {
         parceiroId: user?.id ?? 'p1',
         status: 'em_analise',
       })
+      if (parceiro) {
+        updateParceiro(parceiro.id, { comissaoModalidade: modalidade })
+      }
       setSubmitted({ nome, fazenda, area: areaNum })
       setLoading(false)
     }, 800)
@@ -267,27 +283,72 @@ export default function NovoLeadPage() {
           </CardContent>
         </Card>
 
-        {/* Prévia de comissão — mascarada por padrão */}
-        {comissaoAno0 && (
-          <div className="p-4 bg-success/5 border border-success/20 rounded-xl flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-success">Sua comissão estimada (Ano 0)</p>
-              <p className="text-xs text-success/70 mt-0.5">US$ 1,00/ha × {areaNum.toLocaleString('pt-BR')} ha × PTAX R$ 5,65</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <p className={`text-2xl font-bold text-success transition-all ${!showComissao ? 'value-masked' : ''}`}>
-                {showComissao ? comissaoAno0 : 'R$ ••••••'}
-              </p>
+        {/* Modalidade de comissão */}
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader className="bg-surface/50 border-b pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign size={16} className="text-success" /> Modalidade de Comissão
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-5 space-y-4">
+            <p className="text-xs text-muted">Escolha como deseja receber sua comissão por esta indicação. A opção selecionada será aplicada ao seu perfil de parceiro.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setShowComissao(!showComissao)}
-                className="text-success/60 hover:text-success transition-colors"
+                onClick={() => setModalidade('usd_fixo')}
+                className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${modalidade === 'usd_fixo' ? 'border-success bg-success/5' : 'border-border/50 hover:border-border'}`}
               >
-                {showComissao ? <EyeOff size={18} /> : <Eye size={18} />}
+                <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${modalidade === 'usd_fixo' ? 'border-success' : 'border-muted-foreground/40'}`}>
+                  {modalidade === 'usd_fixo' && <div className="w-2.5 h-2.5 rounded-full bg-success" />}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${modalidade === 'usd_fixo' ? 'text-success' : 'text-foreground'}`}>US$ fixo por lead</p>
+                  <p className="text-xs text-muted mt-0.5">US$ {usdFixo.toFixed(2)}/ha · valor fixo independente do contrato</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalidade('percentual')}
+                className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${modalidade === 'percentual' ? 'border-success bg-success/5' : 'border-border/50 hover:border-border'}`}
+              >
+                <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${modalidade === 'percentual' ? 'border-success' : 'border-muted-foreground/40'}`}>
+                  {modalidade === 'percentual' && <div className="w-2.5 h-2.5 rounded-full bg-success" />}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${modalidade === 'percentual' ? 'text-success' : 'text-foreground'}`}>% sobre recebíveis</p>
+                  <p className="text-xs text-muted mt-0.5">{pctVal}% dos recebíveis do produtor · variável por contrato</p>
+                </div>
               </button>
             </div>
-          </div>
-        )}
+
+            {/* Prévia de comissão estimada */}
+            {areaNum > 0 && (
+              <div className="p-4 bg-success/5 border border-success/20 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-success">Sua comissão estimada (Ano 0)</p>
+                  {modalidade === 'usd_fixo' ? (
+                    <p className="text-xs text-success/70 mt-0.5">US$ {usdFixo.toFixed(2)}/ha × {areaNum.toLocaleString('pt-BR')} ha × PTAX R$ {PTAX.toFixed(2)}</p>
+                  ) : (
+                    <p className="text-xs text-success/70 mt-0.5 flex items-center gap-1"><Percent size={11} /> {pctVal}% calculado sobre recebíveis após assinatura do contrato</p>
+                  )}
+                </div>
+                {modalidade === 'usd_fixo' && comissaoPreviewBrl && (
+                  <div className="flex items-center gap-3">
+                    <p className={`text-2xl font-bold text-success transition-all ${!showComissao ? 'value-masked' : ''}`}>
+                      {showComissao ? comissaoPreviewBrl : 'R$ ••••••'}
+                    </p>
+                    <button type="button" onClick={() => setShowComissao(!showComissao)} className="text-success/60 hover:text-success transition-colors">
+                      {showComissao ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                )}
+                {modalidade === 'percentual' && (
+                  <p className="text-sm font-semibold text-success/70 italic">A definir</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" className="rounded-xl" onClick={() => navigate('/parceiro/leads')}>Cancelar</Button>
