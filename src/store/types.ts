@@ -273,6 +273,8 @@ export interface ColetaSolo {
   profundidadeColeta: string
   socPercent: number
   bdGCm3: number
+  lat?: number
+  lng?: number
   registradoEm: string
   registradoPor: string
 }
