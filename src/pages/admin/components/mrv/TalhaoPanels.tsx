@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import {
   CheckCircle2, XCircle, Leaf, Tractor, FlaskConical,
   Save, Trash2, Info, CloudRain, ChevronDown, ChevronRight, Plus,
-  Droplets, Settings2, FileText,
+  Droplets, Settings2, FileText, MapPin,
 } from 'lucide-react'
 import LavouraForm from '@/pages/cliente/mrv/LavouraForm'
 import PecuariaForm from '@/pages/cliente/mrv/PecuariaForm'
@@ -228,10 +229,24 @@ export function DadosGeraisPanel({ talhao, fazendaId }: { talhao: Talhao; fazend
 
 // ── ColetaSoloPanel ───────────────────────────────────────────────────────────
 
-type LinhaLocal = {
-  _id: string; fazendaId: string; talhaoId: string; talhaoNome: string
-  safra: number; pontosColetados: number; profundidadeColeta: string
-  socPercent: number; bdGCm3: number
+type FormColeta = {
+  safra: number
+  pontosColetados: number
+  profundidadeColeta: string
+  socPercent: string
+  bdGCm3: string
+  latitude: string
+  longitude: string
+}
+
+const FORM_VAZIO: FormColeta = {
+  safra: SAFRA_ATUAL,
+  pontosColetados: 1,
+  profundidadeColeta: '0-30 cm',
+  socPercent: '',
+  bdGCm3: '',
+  latitude: '',
+  longitude: '',
 }
 
 export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazendaId: string }) {
@@ -239,58 +254,65 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
   const adminNome = usuarios.find(u => u.role === 'Super Admin')?.nome ?? 'Admin'
   const minhasColetas = coletasSolo.filter(c => c.talhaoId === talhao.id)
 
-  const novaLinha = (): LinhaLocal => ({
-    _id: crypto.randomUUID(), fazendaId, talhaoId: talhao.id, talhaoNome: talhao.nome,
-    safra: SAFRA_ATUAL, pontosColetados: 1, profundidadeColeta: '0-30 cm', socPercent: 0, bdGCm3: 0,
-  })
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState<FormColeta>(FORM_VAZIO)
+  const set = (field: keyof FormColeta, value: string | number) =>
+    setForm(p => ({ ...p, [field]: value }))
 
-  const [linhasLocais, setLinhasLocais] = useState<LinhaLocal[]>([])
-
-  const atualizarLinhaLocal = (sid: string, field: string, value: string | number) =>
-    setLinhasLocais(prev => prev.map(l => l._id !== sid ? l : { ...l, [field]: value }))
-
-  const salvarLinhaLocal = (sid: string) => {
-    const linha = linhasLocais.find(l => l._id === sid)
-    if (!linha) return
-    if (!linha.pontosColetados || !linha.socPercent || !linha.bdGCm3) {
-      toast.error('Preencha todos os campos antes de salvar.')
+  const handleSalvar = () => {
+    if (!form.socPercent || !form.bdGCm3 || !form.pontosColetados) {
+      toast.error('Preencha SOC (%), BD e pontos coletados.')
       return
     }
     addColetaSolo({
-      fazendaId: linha.fazendaId, talhaoId: linha.talhaoId, talhaoNome: linha.talhaoNome,
-      safra: linha.safra, pontosColetados: Number(linha.pontosColetados),
-      profundidadeColeta: linha.profundidadeColeta, socPercent: Number(linha.socPercent),
-      bdGCm3: Number(linha.bdGCm3), registradoEm: new Date().toISOString(), registradoPor: adminNome,
+      fazendaId,
+      talhaoId: talhao.id,
+      talhaoNome: talhao.nome,
+      safra: Number(form.safra),
+      pontosColetados: Number(form.pontosColetados),
+      profundidadeColeta: form.profundidadeColeta,
+      socPercent: Number(form.socPercent),
+      bdGCm3: Number(form.bdGCm3),
+      latitude: form.latitude !== '' ? Number(form.latitude) : undefined,
+      longitude: form.longitude !== '' ? Number(form.longitude) : undefined,
+      registradoEm: new Date().toISOString(),
+      registradoPor: adminNome,
     })
-    updateTalhao(linha.talhaoId, {
-      socPercent: Number(linha.socPercent), bdGCm3: Number(linha.bdGCm3),
-      pontosColetados: Number(linha.pontosColetados), dadosValidados: true,
-    }, `Coleta laboratorial — ${linha.profundidadeColeta}`)
-    setLinhasLocais(prev => prev.filter(l => l._id !== sid))
+    updateTalhao(talhao.id, {
+      socPercent: Number(form.socPercent),
+      bdGCm3: Number(form.bdGCm3),
+      pontosColetados: Number(form.pontosColetados),
+      dadosValidados: true,
+    }, `Coleta laboratorial — ${form.profundidadeColeta}`)
     toast.success('Coleta registrada e propagada ao talhão!')
+    setForm(FORM_VAZIO)
+    setModalOpen(false)
   }
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted">Dados laboratoriais para o motor RothC (critério 8 VM0042).</p>
-        <Button size="sm" className="gap-1.5 text-xs rounded-xl h-8" onClick={() => setLinhasLocais(p => [...p, novaLinha()])}>
+        <Button size="sm" className="gap-1.5 text-xs rounded-xl h-8" onClick={() => setModalOpen(true)}>
           <Plus size={12} /> Adicionar Linha
         </Button>
       </div>
 
+      {/* Tabela read-only */}
       <div className="border border-border/50 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="bg-accent/5">
               <tr>
                 <th className="text-left p-2.5 font-medium">Safra</th>
-                <th className="text-left p-2.5 font-medium">Pts. Coletados</th>
+                <th className="text-left p-2.5 font-medium">Pts.</th>
                 <th className="text-left p-2.5 font-medium">Profundidade</th>
                 <th className="text-left p-2.5 font-medium">SOC (%)</th>
                 <th className="text-left p-2.5 font-medium">BD (g/cm³)</th>
+                <th className="text-left p-2.5 font-medium">Lat / Lng</th>
                 <th className="text-left p-2.5 font-medium">Registrado por</th>
-                <th className="p-2.5"></th>
+                <th className="p-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -305,6 +327,11 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
                   <td className="p-2.5 font-mono">{c.profundidadeColeta}</td>
                   <td className="p-2.5 font-semibold">{c.socPercent.toFixed(2)}</td>
                   <td className="p-2.5 font-semibold">{c.bdGCm3.toFixed(3)}</td>
+                  <td className="p-2.5 text-muted font-mono text-[10px]">
+                    {c.latitude != null && c.longitude != null
+                      ? <span className="flex items-center gap-1"><MapPin size={9} className="text-primary" />{c.latitude.toFixed(5)}, {c.longitude.toFixed(5)}</span>
+                      : <span className="italic opacity-50">—</span>}
+                  </td>
                   <td className="p-2.5 text-muted">
                     {c.registradoPor}
                     <br />
@@ -319,52 +346,9 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
                 </tr>
               ))}
 
-              {linhasLocais.map(l => (
-                <tr key={l._id} className="bg-warning/5 border-l-2 border-warning/40">
-                  <td className="p-1">
-                    <Input type="number" value={l.safra} min={2020} max={2035}
-                      onChange={e => atualizarLinhaLocal(l._id, 'safra', Number(e.target.value))}
-                      className="w-16 h-7 text-xs" />
-                  </td>
-                  <td className="p-1">
-                    <Input type="number" min={1} value={l.pontosColetados}
-                      onChange={e => atualizarLinhaLocal(l._id, 'pontosColetados', Number(e.target.value))}
-                      className="w-14 h-7 text-xs" />
-                  </td>
-                  <td className="p-1">
-                    <Input value={l.profundidadeColeta}
-                      onChange={e => atualizarLinhaLocal(l._id, 'profundidadeColeta', e.target.value)}
-                      className="w-20 h-7 text-xs" placeholder="0-30 cm" />
-                  </td>
-                  <td className="p-1">
-                    <Input type="number" step="0.01" value={l.socPercent || ''}
-                      onChange={e => atualizarLinhaLocal(l._id, 'socPercent', Number(e.target.value))}
-                      className="w-16 h-7 text-xs" />
-                  </td>
-                  <td className="p-1">
-                    <Input type="number" step="0.001" value={l.bdGCm3 || ''}
-                      onChange={e => atualizarLinhaLocal(l._id, 'bdGCm3', Number(e.target.value))}
-                      className="w-16 h-7 text-xs" />
-                  </td>
-                  <td className="p-1 text-muted text-[11px]">{adminNome}</td>
-                  <td className="p-1">
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="text-danger h-7 px-1.5"
-                        onClick={() => setLinhasLocais(p => p.filter(x => x._id !== l._id))}>
-                        <Trash2 size={11} />
-                      </Button>
-                      <Button size="sm" className="h-7 text-xs gap-1"
-                        onClick={() => salvarLinhaLocal(l._id)}>
-                        <Save size={10} /> Salvar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {minhasColetas.length === 0 && linhasLocais.length === 0 && (
+              {minhasColetas.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted">
+                  <td colSpan={8} className="p-8 text-center text-muted">
                     <FlaskConical size={22} className="mx-auto mb-2 opacity-30" />
                     Nenhum dado laboratorial registrado. Clique em "+ Adicionar Linha".
                   </td>
@@ -380,6 +364,98 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
           </p>
         </div>
       </div>
+
+      {/* Modal de cadastro */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FlaskConical size={16} className="text-primary" />
+              Nova Coleta de Solo — {talhao.nome}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            {/* Safra */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-safra">Safra</Label>
+              <Input id="cs-safra" type="number" min={2020} max={2035}
+                value={form.safra}
+                onChange={e => set('safra', Number(e.target.value))}
+                className="rounded-xl" />
+            </div>
+
+            {/* Pontos coletados */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-pts">Pontos Coletados</Label>
+              <Input id="cs-pts" type="number" min={1}
+                value={form.pontosColetados}
+                onChange={e => set('pontosColetados', Number(e.target.value))}
+                className="rounded-xl" />
+            </div>
+
+            {/* Profundidade */}
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="cs-prof">Profundidade de Coleta</Label>
+              <Input id="cs-prof" placeholder="ex: 0-30 cm"
+                value={form.profundidadeColeta}
+                onChange={e => set('profundidadeColeta', e.target.value)}
+                className="rounded-xl" />
+            </div>
+
+            {/* SOC */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-soc">SOC (%)<span className="text-danger ml-0.5">*</span></Label>
+              <Input id="cs-soc" type="number" step="0.01" placeholder="ex: 2.40"
+                value={form.socPercent}
+                onChange={e => set('socPercent', e.target.value)}
+                className="rounded-xl" />
+            </div>
+
+            {/* BD */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-bd">BD (g/cm³)<span className="text-danger ml-0.5">*</span></Label>
+              <Input id="cs-bd" type="number" step="0.001" placeholder="ex: 1.280"
+                value={form.bdGCm3}
+                onChange={e => set('bdGCm3', e.target.value)}
+                className="rounded-xl" />
+            </div>
+
+            {/* Coordenadas */}
+            <div className="col-span-2 border border-border/40 rounded-xl p-3 space-y-3 bg-accent/5">
+              <p className="text-xs font-medium flex items-center gap-1.5 text-muted">
+                <MapPin size={12} className="text-primary" />
+                Coordenadas do ponto de coleta (opcional)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cs-lat" className="text-xs">Latitude</Label>
+                  <Input id="cs-lat" type="number" step="0.00001" placeholder="ex: -15.78542"
+                    value={form.latitude}
+                    onChange={e => set('latitude', e.target.value)}
+                    className="rounded-xl text-xs" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cs-lng" className="text-xs">Longitude</Label>
+                  <Input id="cs-lng" type="number" step="0.00001" placeholder="ex: -47.92910"
+                    value={form.longitude}
+                    onChange={e => set('longitude', e.target.value)}
+                    className="rounded-xl text-xs" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-border/30">
+            <Button variant="outline" className="rounded-xl" onClick={() => { setForm(FORM_VAZIO); setModalOpen(false) }}>
+              Cancelar
+            </Button>
+            <Button className="gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white" onClick={handleSalvar}>
+              <Save size={14} /> Registrar Coleta
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
