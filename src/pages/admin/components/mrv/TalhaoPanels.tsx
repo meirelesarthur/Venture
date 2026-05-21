@@ -231,6 +231,8 @@ export function DadosGeraisPanel({ talhao, fazendaId }: { talhao: Talhao; fazend
 
 type FormColeta = {
   safra: number
+  identificacaoAmostra: string
+  identificacaoPonto: string
   pontosColetados: number
   profundidadeColeta: string
   socPercent: string
@@ -241,6 +243,8 @@ type FormColeta = {
 
 const FORM_VAZIO: FormColeta = {
   safra: SAFRA_ATUAL,
+  identificacaoAmostra: '',
+  identificacaoPonto: '',
   pontosColetados: 1,
   profundidadeColeta: '0-30 cm',
   socPercent: '',
@@ -260,6 +264,10 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
     setForm(p => ({ ...p, [field]: value }))
 
   const handleSalvar = () => {
+    if (!form.identificacaoAmostra.trim()) {
+      toast.error('Preencha a identificação da amostra.')
+      return
+    }
     if (!form.socPercent || !form.bdGCm3 || !form.pontosColetados) {
       toast.error('Preencha SOC (%), BD e pontos coletados.')
       return
@@ -269,6 +277,8 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
       talhaoId: talhao.id,
       talhaoNome: talhao.nome,
       safra: Number(form.safra),
+      identificacaoAmostra: form.identificacaoAmostra.trim(),
+      identificacaoPonto: form.identificacaoPonto.trim() || undefined,
       pontosColetados: Number(form.pontosColetados),
       profundidadeColeta: form.profundidadeColeta,
       socPercent: Number(form.socPercent),
@@ -306,7 +316,8 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
             <thead className="bg-accent/5">
               <tr>
                 <th className="text-left p-2.5 font-medium">Safra</th>
-                <th className="text-left p-2.5 font-medium">Pts.</th>
+                <th className="text-left p-2.5 font-medium">ID Amostra</th>
+                <th className="text-left p-2.5 font-medium">ID Ponto</th>
                 <th className="text-left p-2.5 font-medium">Profundidade</th>
                 <th className="text-left p-2.5 font-medium">SOC (%)</th>
                 <th className="text-left p-2.5 font-medium">BD (g/cm³)</th>
@@ -319,10 +330,15 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
               {minhasColetas.map(c => (
                 <tr key={c.id} className="hover:bg-accent/5">
                   <td className="p-2.5">{c.safra}/{c.safra + 1}</td>
+                  <td className="p-2.5 font-mono text-[10px]">
+                    {c.identificacaoAmostra
+                      ? <Badge className="bg-accent/30 text-foreground border-border/40 text-[10px] shadow-none font-mono">{c.identificacaoAmostra}</Badge>
+                      : <span className="italic opacity-40">—</span>}
+                  </td>
                   <td className="p-2.5">
-                    <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] shadow-none">
-                      {c.pontosColetados} pts
-                    </Badge>
+                    {c.identificacaoPonto
+                      ? <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] shadow-none">{c.identificacaoPonto}</Badge>
+                      : <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] shadow-none">{c.pontosColetados} pts</Badge>}
                   </td>
                   <td className="p-2.5 font-mono">{c.profundidadeColeta}</td>
                   <td className="p-2.5 font-semibold">{c.socPercent.toFixed(2)}</td>
@@ -348,7 +364,7 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
 
               {minhasColetas.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted">
+                  <td colSpan={9} className="p-8 text-center text-muted">
                     <FlaskConical size={22} className="mx-auto mb-2 opacity-30" />
                     Nenhum dado laboratorial registrado. Clique em "+ Adicionar Linha".
                   </td>
@@ -376,6 +392,15 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4 mt-2">
+            {/* Identificação da Amostra */}
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="cs-id-amostra">Identificação da Amostra<span className="text-danger ml-0.5">*</span></Label>
+              <Input id="cs-id-amostra" placeholder="ex: AM-001, Lab ESALQ ref. 23X44"
+                value={form.identificacaoAmostra}
+                onChange={e => set('identificacaoAmostra', e.target.value)}
+                className="rounded-xl" />
+            </div>
+
             {/* Safra */}
             <div className="space-y-1.5">
               <Label htmlFor="cs-safra">Safra</Label>
@@ -385,9 +410,18 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
                 className="rounded-xl" />
             </div>
 
+            {/* Identificação do Ponto */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cs-id-ponto">Identificação do Ponto</Label>
+              <Input id="cs-id-ponto" placeholder="ex: P-01, PT-A"
+                value={form.identificacaoPonto}
+                onChange={e => set('identificacaoPonto', e.target.value)}
+                className="rounded-xl" />
+            </div>
+
             {/* Pontos coletados */}
             <div className="space-y-1.5">
-              <Label htmlFor="cs-pts">Pontos Coletados</Label>
+              <Label htmlFor="cs-pts">Nº Pontos Coletados</Label>
               <Input id="cs-pts" type="number" min={1}
                 value={form.pontosColetados}
                 onChange={e => set('pontosColetados', Number(e.target.value))}
@@ -395,7 +429,7 @@ export function ColetaSoloPanel({ talhao, fazendaId }: { talhao: Talhao; fazenda
             </div>
 
             {/* Profundidade */}
-            <div className="space-y-1.5 col-span-2">
+            <div className="space-y-1.5">
               <Label htmlFor="cs-prof">Profundidade de Coleta</Label>
               <Input id="cs-prof" placeholder="ex: 0-30 cm"
                 value={form.profundidadeColeta}

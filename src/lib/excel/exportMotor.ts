@@ -5,6 +5,8 @@ import type { DetalhesCalculo } from '@/motor'
 const sn = (v: unknown, dec = 4): string =>
   typeof v === 'number' ? v.toFixed(dec) : String(v ?? '—')
 
+const pct = (v: number): string => `${(v * 100).toFixed(1)}%`
+
 export function exportMotorXlsx(
   resultados: ResultadoMotor[],
   talhoes: Talhao[],
@@ -16,10 +18,26 @@ export function exportMotorXlsx(
   const wb = XLSX.utils.book_new()
 
   // ── Aba 1: Resumo por talhão ──────────────────────────────────────────────────
+  // Quando há baseline, inclui colunas Baseline (snap) | Projeto (atual) | Δ VCUs | Δ (%)
+  const resumoHeader = [
+    'Talhão', 'Área (ha)',
+    'SOC Baseline (tC/ha)', 'SOC Projeto (tC/ha)', 'Δ SOC (tC/ha)',
+    'N₂O Baseline', 'N₂O Projeto',
+    'CH₄ Baseline', 'CH₄ Projeto',
+    'VCUs/ha', 'VCUs Total (Projeto)',
+    ...(baseline ? ['VCUs Baseline (snap)', 'Δ VCUs (tCO₂e)', 'Δ VCUs (%)'] : []),
+  ]
+
   const resumoRows: string[][] = [
-    ['Talhão', 'Área (ha)', 'SOC Baseline (tC/ha)', 'SOC Projeto (tC/ha)', 'Δ SOC (tC/ha)', 'N₂O Baseline', 'N₂O Projeto', 'CH₄ Baseline', 'CH₄ Projeto', 'VCUs/ha', 'VCUs Total'],
+    resumoHeader,
     ...resultados.map(r => {
       const t = talhoes.find(x => x.id === r.talhaoId)
+      const baseSnap = baseline?.resultadoSnapshot?.find(b => b.talhaoId === r.talhaoId)
+      const vcusProjeto = r.vcusEmitidosTotal
+      const vcusBaseline = baseSnap?.vcusEmitidosTotal ?? 0
+      const deltaVcus = vcusProjeto - vcusBaseline
+      const deltaPct = vcusBaseline !== 0 ? deltaVcus / vcusBaseline : 0
+
       return [
         t?.nome ?? r.talhaoId,
         String(t?.areaHa ?? '—'),
@@ -32,6 +50,11 @@ export function exportMotorXlsx(
         sn(r.ch4ProjetoTco2eHa),
         sn(r.vcusEmitidosHa, 2),
         sn(r.vcusEmitidosTotal, 2),
+        ...(baseline ? [
+          baseSnap ? sn(vcusBaseline, 2) : '—',
+          baseSnap ? sn(deltaVcus, 2) : '—',
+          baseSnap ? pct(deltaPct) : '—',
+        ] : []),
       ]
     }),
   ]
@@ -71,7 +94,7 @@ export function exportMotorXlsx(
   const ws2 = XLSX.utils.aoa_to_sheet(eqRows)
   XLSX.utils.book_append_sheet(wb, ws2, 'Equações Detalhadas')
 
-  // ── Aba 3: Baseline vs Projeto ────────────────────────────────────────────────
+  // ── Aba 3: Baseline vs Projeto (totais) ───────────────────────────────────────
   const totalAtual = resultados.reduce((s, r) => s + r.vcusEmitidosTotal, 0)
   const totalBase = baseline?.totalTco2e ?? 0
   const delta = totalAtual - totalBase
@@ -85,6 +108,67 @@ export function exportMotorXlsx(
   ]
   const ws3 = XLSX.utils.aoa_to_sheet(deltaRows)
   XLSX.utils.book_append_sheet(wb, ws3, 'Baseline vs Projeto')
+
+  // ── Aba 4: Delta por Talhão ───────────────────────────────────────────────────
+  // Mostra o breakdown detalhado do delta (Projeto − Baseline) por talhão
+  if (baseline?.resultadoSnapshot?.length) {
+    const deltaByTalhaoRows: string[][] = [
+      [
+        'Talhão', 'Área (ha)',
+        'VCUs Baseline (tCO₂e)', 'VCUs Projeto (tCO₂e)',
+        'Δ VCUs (tCO₂e)', 'Δ VCUs (%)',
+        'Δ SOC (tC/ha)', 'Δ N₂O (tCO₂e/ha)', 'Δ CH₄ (tCO₂e/ha)',
+        'Observação',
+      ],
+    ]
+
+    for (const r of resultados) {
+      const t = talhoes.find(x => x.id === r.talhaoId)
+      const snap = baseline.resultadoSnapshot.find(b => b.talhaoId === r.talhaoId)
+
+      const vcusProjeto = r.vcusEmitidosTotal
+      const vcusBase = snap?.vcusEmitidosTotal ?? 0
+      const dVcus = vcusProjeto - vcusBase
+      const dPct = vcusBase !== 0 ? dVcus / vcusBase : 0
+
+      const obs = !snap
+        ? 'Talhão sem snapshot na baseline'
+        : dVcus > 0
+          ? 'Créditos gerados acima da baseline'
+          : dVcus < 0
+            ? 'Créditos abaixo da baseline'
+            : 'Sem variação'
+
+      deltaByTalhaoRows.push([
+        t?.nome ?? r.talhaoId,
+        String(t?.areaHa ?? '—'),
+        snap ? sn(vcusBase, 2) : '—',
+        sn(vcusProjeto, 2),
+        snap ? sn(dVcus, 2) : '—',
+        snap ? pct(dPct) : '—',
+        sn(r.deltaSocTcHa),
+        sn(r.deltaN2oTco2eHa),
+        sn(r.deltaCh4Tco2eHa),
+        obs,
+      ])
+    }
+
+    // Linha de totais
+    const totalDelta = totalAtual - totalBase
+    const totalDeltaPct = totalBase !== 0 ? totalDelta / totalBase : 0
+    deltaByTalhaoRows.push([
+      'TOTAL', '',
+      sn(totalBase, 2),
+      sn(totalAtual, 2),
+      sn(totalDelta, 2),
+      pct(totalDeltaPct),
+      '', '', '',
+      'Soma de todos os talhões',
+    ])
+
+    const ws4 = XLSX.utils.aoa_to_sheet(deltaByTalhaoRows)
+    XLSX.utils.book_append_sheet(wb, ws4, 'Delta por Talhão')
+  }
 
   const filename = `motor_${fazenda.nome.replace(/\s+/g, '_')}_${resultados[0]?.anoAgricola ?? 'N/A'}.xlsx`
   XLSX.writeFile(wb, filename)

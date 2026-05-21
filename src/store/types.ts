@@ -269,6 +269,8 @@ export interface ColetaSolo {
   talhaoId: string
   talhaoNome: string
   safra: number
+  identificacaoAmostra?: string   // ex: "AM-001", "Lab ESALQ ref. 23X44"
+  identificacaoPonto?: string     // ex: "P-01", "PT-A" — substitui contagem numérica na exibição
   pontosColetados: number
   profundidadeColeta: string
   socPercent: number

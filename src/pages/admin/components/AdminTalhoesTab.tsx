@@ -21,6 +21,8 @@ function linhaVazia(fazendaId: string, talhaoId: string, talhaoNome: string) {
     talhaoId,
     talhaoNome,
     safra: SAFRA_ATUAL,
+    identificacaoAmostra: '',
+    identificacaoPonto: '',
     pontosColetados: 1,
     profundidadeColeta: '0-30 cm',
     socPercent: 0,
@@ -133,6 +135,10 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
   const salvarLinhaLocal = (sid: string) => {
     const linha = linhasLocais.find(l => l._id === sid)
     if (!linha) return
+    if (!linha.identificacaoAmostra?.trim()) {
+      toast.error('Preencha a identificação da amostra antes de salvar.')
+      return
+    }
     if (!linha.pontosColetados || !linha.socPercent || !linha.bdGCm3) {
       toast.error('Preencha todos os campos antes de salvar.')
       return
@@ -143,6 +149,8 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
       talhaoId: linha.talhaoId,
       talhaoNome: linha.talhaoNome,
       safra: linha.safra,
+      identificacaoAmostra: linha.identificacaoAmostra?.trim(),
+      identificacaoPonto: linha.identificacaoPonto?.trim() || undefined,
       pontosColetados: Number(linha.pontosColetados),
       profundidadeColeta: linha.profundidadeColeta,
       socPercent: Number(linha.socPercent),
@@ -309,7 +317,8 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                 <tr>
                   <th className="text-left p-3">Talhão</th>
                   <th className="text-left p-3">Safra</th>
-                  <th className="text-left p-3">Pts. Coletados</th>
+                  <th className="text-left p-3">ID Amostra</th>
+                  <th className="text-left p-3">ID Ponto</th>
                   <th className="text-left p-3">Profundidade</th>
                   <th className="text-left p-3">SOC (%)</th>
                   <th className="text-left p-3">BD (g/cm³)</th>
@@ -324,8 +333,15 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                   <tr key={c.id} className="hover:bg-accent/5 bg-success/2">
                     <td className="p-3 font-medium">{c.talhaoNome}</td>
                     <td className="p-3 text-muted">{c.safra}/{c.safra+1}</td>
+                    <td className="p-3 font-mono text-xs">
+                      {c.identificacaoAmostra
+                        ? <Badge className="bg-accent/30 text-foreground border-border/40 text-xs shadow-none font-mono">{c.identificacaoAmostra}</Badge>
+                        : <span className="text-muted text-xs">—</span>}
+                    </td>
                     <td className="p-3">
-                      <Badge className="bg-primary/10 text-primary border-primary/20 text-xs shadow-none">{c.pontosColetados} pts</Badge>
+                      {c.identificacaoPonto
+                        ? <Badge className="bg-primary/10 text-primary border-primary/20 text-xs shadow-none">{c.identificacaoPonto}</Badge>
+                        : <Badge className="bg-primary/10 text-primary border-primary/20 text-xs shadow-none">{c.pontosColetados} pts</Badge>}
                     </td>
                     <td className="p-3 font-mono text-xs text-muted">{c.profundidadeColeta}</td>
                     <td className="p-3 font-semibold text-foreground">{c.socPercent.toFixed(2)}</td>
@@ -361,9 +377,14 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                         className="w-20 h-8 text-xs" />
                     </td>
                     <td className="p-1.5">
-                      <Input type="number" min={1} value={l.pontosColetados}
-                        onChange={e => atualizarLinhaLocal(l._id, 'pontosColetados', Number(e.target.value))}
-                        className="w-20 h-8 text-xs" />
+                      <Input value={l.identificacaoAmostra ?? ''}
+                        onChange={e => atualizarLinhaLocal(l._id, 'identificacaoAmostra', e.target.value)}
+                        className="w-28 h-8 text-xs" placeholder="AM-001" />
+                    </td>
+                    <td className="p-1.5">
+                      <Input value={l.identificacaoPonto ?? ''}
+                        onChange={e => atualizarLinhaLocal(l._id, 'identificacaoPonto', e.target.value)}
+                        className="w-20 h-8 text-xs" placeholder="P-01" />
                     </td>
                     <td className="p-1.5">
                       <Input value={l.profundidadeColeta}
@@ -397,7 +418,7 @@ export function AdminTalhoesTab({ fazendaId }: { fazendaId: string }) {
                 {/* Estado vazio */}
                 {minhasColetas.length === 0 && linhasLocais.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted text-sm">
+                    <td colSpan={10} className="p-8 text-center text-muted text-sm">
                       <FlaskConical size={24} className="mx-auto mb-2 opacity-30" />
                       Nenhum dado laboratorial registrado. Clique em "+ Adicionar Linha" para iniciar.
                     </td>
